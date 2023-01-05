@@ -1,0 +1,14 @@
+{
+  "name": "firestore-rules-tests",
+  "scripts": {
+    "lint": "eslint --ext .js,.ts .",
+    "build": "tsc",
+    "test": "npm run build && firebase emulators:exec \"mocha --exit\" --only firestore"
+  },
+  "main": "lib/index.js",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^2.0.5",
+    "mocha": "^10.2.0"
+  },
+  "private": true
+}
