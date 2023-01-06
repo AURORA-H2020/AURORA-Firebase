@@ -23,7 +23,7 @@
       "port": 8080
     },
     "ui": {
-      "enabled": true
+      "enabled": false
     }
   }
 }
