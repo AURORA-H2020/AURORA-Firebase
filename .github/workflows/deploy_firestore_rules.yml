@@ -1,0 +1,27 @@
+name: Deploy Firestore Rules
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'firestore-rules-tests/**'
+      - 'firestore.rules'
+
+jobs:
+  deploy:
+    name: Deploy Firestore Rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Firestore Rules Tests to succeed
+        uses: lewagon/wait-on-check-action@v1.2.0
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Test Firestore Rules'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v2
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+      - name: Deploy Firestore Rules to Firebase
+        run: firebase deploy --force --only firestore:rules --non-interactive --token ${{ secrets.FIREBASE_TOKEN }}
