@@ -1,0 +1,40 @@
+name: Test Firestore Rules
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'firestore-rules-tests/**'
+      - 'firestore.rules'
+
+jobs:
+  test:
+    name: Test Firestore Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "16"
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}       
+          restore-keys: |
+              ${{ runner.os }}-build-${{ env.cache-name }}-
+              ${{ runner.os }}-build-
+              ${{ runner.os }}-
+      - name: Cache Firebase Emulator Binaries
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+      - name: Install Firestore Rules Tests Dependencies
+        run: npm ci
+        working-directory: firestore-rules-tests
+      - name: Run Tests
+        run: firebase emulators:exec "npm test" --only firestore
+        working-directory: firestore-rules-tests
