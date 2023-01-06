@@ -1,0 +1,35 @@
+name: Test Cloud Functions
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'functions/**'
+
+jobs:
+  test:
+    name: Test Cloud Functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "16"
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}       
+          restore-keys: |
+              ${{ runner.os }}-build-${{ env.cache-name }}-
+              ${{ runner.os }}-build-
+              ${{ runner.os }}-
+      - name: Install Cloud Functions Dependencies
+        run: npm ci
+        working-directory: functions
+      - name: Lint
+        run: npm run lint
+        working-directory: functions
+      - name: Build
+        run: npm run build
+        working-directory: functions
