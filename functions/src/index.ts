@@ -1,9 +1,11 @@
-import * as functions from "firebase-functions";
+import { initializeApp } from "firebase-admin";
+// eslint-disable-next-line max-len
+import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission.firestore";
 
-// // Start writing functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// Initialize Firebase Admin SDK
+initializeApp({
+  credential: JSON.parse(process.env.FIREBASE_TOKEN ?? ""),
+});
+
+// Calculate Carbon Emission Firestore Cloud Function
+exports.calculateCarbonEmission = calculateCarbonEmissionFirestore;
