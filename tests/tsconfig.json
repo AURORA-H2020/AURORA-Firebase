@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "Node16",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "lib",
