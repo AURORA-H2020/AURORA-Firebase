@@ -23,14 +23,14 @@ beforeEach(async () => {
 afterEach(() => testEnvironment.cleanup());
 
 describe("sites Collection", () => {
-  test("Deny to read a single site", async () =>
+  it("Deny to read a single site", async () =>
     await assertFails(testEnvironment.unauthenticatedContext().firestore().collection("sites").doc("1").get()));
-  test("Allow to list all sites", async () =>
+  it("Allow to list all sites", async () =>
     await assertSucceeds(testEnvironment.unauthenticatedContext().firestore().collection("sites").get()));
-  test("Deny to create a site", async () =>
+  it("Deny to create a site", async () =>
     await assertFails(testEnvironment.unauthenticatedContext().firestore().collection("sites").add({})));
-  test("Deny to update a site", async () =>
+  it("Deny to update a site", async () =>
     await assertFails(testEnvironment.unauthenticatedContext().firestore().collection("sites").doc("1").update({})));
-  test("Deny to delete a site", async () =>
+  it("Deny to delete a site", async () =>
     await assertFails(testEnvironment.unauthenticatedContext().firestore().collection("sites").doc("1").delete()));
 });
