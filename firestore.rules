@@ -1,8 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Disallow any read or write which are not explicitly allowed
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
+
+    // Access-Rules for sites collection and its subcollections
+    match /sites/{siteId=**} {
+        // Deny single read
+        allow get: if false;
+        // Allow List Read
+        allow list: if true;
+        // Deny Write (Create, Update, Delete)
+        allow write: if false;
+    }
+
+    // Access-Rules for users collection and its subcollections
+    match /users/{userId=**} {
+        // Allow single read if auth uid matches with the userId
+        allow get: if request.auth.uid == userId;
+        // Deny list
+        allow list: if false;
+        // Allow Create if auth uid matches with the userId
+        allow create: if request.auth.uid == userId;
+        // Allow Update if auth uid matches with the userId
+        // and the consumptionSummary field hasn't been updated
+        allow update: if request.auth.uid == uid
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['consumptionSummary']);
+        // Deny delete as an user documents exclusively gets deleted by a cloud function
+        allow delete: if false;
+
+        // Access-Rules for consumptions subcollection
+        match /consumptions/{consumptionID} {
+          // Allow list if auth uid matches with the userId
+          allow list: if request.auth.uid == userId;
+          // Allow delete if auth uid matches with the userId
+          allow delete: if request.auth.uid == userId;
+        }
+    }
+
   }
 }
