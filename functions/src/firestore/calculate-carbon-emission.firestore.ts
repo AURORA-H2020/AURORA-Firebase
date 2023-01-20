@@ -1,8 +1,10 @@
 import * as functions from "firebase-functions";
+import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../constants";
+import * as Path from "path";
 
 export default functions
-  .region("europe-west3")
-  .firestore.document("users/{userId}/consumptions/{consumptionId}")
+  .region(preferredRegion)
+  .firestore.document(Path.join(usersCollectionName, "userId", consumptionsCollectionName, "consumptionId"))
   .onWrite(async (snapshot, context) => {
     // TODO: Calculate and Update Carbon Emission
     console.log(context.params.userId, context.params.consumptionId);
