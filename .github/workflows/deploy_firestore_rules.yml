@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'firestore-rules-tests/**'
+      - 'tests/**'
       - 'firestore.rules'
 
 jobs:
