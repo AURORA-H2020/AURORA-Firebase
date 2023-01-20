@@ -12,7 +12,7 @@ service cloud.firestore {
         // Deny single read
         allow get: if false;
         // Allow List Read
-        allow list: if true;
+        allow list: if request.auth != null;
         // Deny Write (Create, Update, Delete)
         allow write: if false;
     }
