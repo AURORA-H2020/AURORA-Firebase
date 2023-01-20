@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
-    "module": "ES2022",
+    "module": "commonjs",
     "moduleResolution": "Node16",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "ES2017"
+    "target": "es2017"
   },
   "compileOnSave": true,
   "include": [
