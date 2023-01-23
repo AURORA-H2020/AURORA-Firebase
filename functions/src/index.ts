@@ -1,5 +1,4 @@
 import { initializeApp } from "firebase-admin";
-// eslint-disable-next-line max-len
 import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission.firestore";
 import deleteUserDataAuth from "./auth/delete-user-data.auth";
 import exportUserDataHttps from "./https/export-user-data.https";
