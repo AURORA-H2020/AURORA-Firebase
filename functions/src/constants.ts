@@ -1,5 +1,6 @@
 /**
  * The preferred region for a Cloud Function
+ * europe-west3 (Frankfurt Germany)
  */
 export const preferredRegion = "europe-west3";
 

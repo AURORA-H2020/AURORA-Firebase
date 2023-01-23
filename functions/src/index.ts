@@ -2,11 +2,11 @@ import { initializeApp } from "firebase-admin";
 // eslint-disable-next-line max-len
 import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission.firestore";
 import deleteUserDataAuth from "./auth/delete-user-data.auth";
+import exportUserDataHttps from "./https/export-user-data.https";
+import calculateConsumptionSummaryFirestore from "./firestore/calculate-consumption-summary.firestore";
 
 // Initialize Firebase Admin SDK
-initializeApp({
-  credential: JSON.parse(process.env.FIREBASE_TOKEN ?? ""),
-});
+initializeApp();
 
 /**
  * Auth Cloud Functions
@@ -21,3 +21,13 @@ exports["delete-user-data"] = deleteUserDataAuth;
 
 // Calculate Carbon Emission Firestore Cloud Function
 exports["calculate-carbon-emission"] = calculateCarbonEmissionFirestore;
+
+// Calculate Consumption Summary Firestore Cloud Function
+exports["calculate-consumption-summary"] = calculateConsumptionSummaryFirestore;
+
+/**
+ * HTTPS Cloud Functions
+ */
+
+// Export user data HTTPS Callable Cloud Function
+exports["export-user-data"] = exportUserDataHttps;
