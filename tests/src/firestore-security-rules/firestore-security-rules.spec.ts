@@ -24,7 +24,7 @@ describe("Firestore Security Rules", () => {
     unauthenticatedContext = testEnvironment.unauthenticatedContext();
   });
 
-  afterEach(() => testEnvironment.cleanup());
+  afterEach(() => testEnvironment?.cleanup());
 
   describe("/sites", () => {
     describe("Unauthorized User", () => {
