@@ -1,17 +1,26 @@
+import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import * as functions from "firebase-functions";
-import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../constants";
-import * as Path from "path";
 import * as admin from "firebase-admin";
+import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
+import * as Path from "path";
 import { ConsumptionSummary } from "../models/consumption-summary";
 
-export default functions
+// Initialize Firebase Admin SDK
+initializeAppIfNeeded();
+
+/**
+ * [calculateConsumptionSummary]
+ * A Cloud Function triggered by a document write in the consumptions sub-collection of a user.
+ * This function will calculate the consumption summary and write it to the corresponding property.
+ */
+export const calculateConsumptionSummary = functions
   .region(preferredRegion)
   .firestore.document(Path.join(usersCollectionName, "userId", consumptionsCollectionName, "consumptionId"))
   .onWrite(async (snapshot, context) =>
     admin
       .firestore()
       .doc(Path.join(usersCollectionName, context.params.userId))
-      .update("consumptionSummary", calculateConsumptionSummary(snapshot, context))
+      .update("consumptionSummary", consumptionSummary(snapshot, context))
   );
 
 /**
@@ -19,7 +28,7 @@ export default functions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-async function calculateConsumptionSummary(
+async function consumptionSummary(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
 ): Promise<ConsumptionSummary> {

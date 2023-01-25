@@ -1,8 +1,18 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { preferredRegion, usersCollectionName } from "../constants";
+import { preferredRegion, usersCollectionName } from "../utils/constants";
+import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
-export default functions
+// Initialize Firebase Admin SDK
+initializeAppIfNeeded();
+
+/**
+ * [deleteUserData]
+ * A Cloud Function which gets triggered when a user has been deleted.
+ * This function will clean up all Firestore documents and collection
+ * associated with the deleted user.
+ */
+export const deleteUserData = functions
   .region(preferredRegion)
   .auth.user()
   .onDelete(async (user) => {

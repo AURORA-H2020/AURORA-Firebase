@@ -1,32 +1,18 @@
-import { initializeApp } from "firebase-admin/app";
-import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission";
-import deleteUserDataAuth from "./auth/delete-user-data";
-import downloadUserDataHttps from "./https/download-user-data";
-import calculateConsumptionSummaryFirestore from "./firestore/calculate-consumption-summary";
-
-// Initialize Firebase Admin SDK
-initializeApp();
-
 /**
  * Auth Cloud Functions
  */
 
-// Delete user data on Firebase user account deletion
-exports.deleteUserData = deleteUserDataAuth;
+export * from "./auth/delete-user-data";
 
 /**
  * Firestore Cloud Functions
  */
 
-// Calculate Carbon Emission Firestore Cloud Function
-exports.calculateCarbonEmission = calculateCarbonEmissionFirestore;
-
-// Calculate Consumption Summary Firestore Cloud Function
-exports.calculateConsumptionSummary = calculateConsumptionSummaryFirestore;
+export * from "./firestore/calculate-carbon-emission";
+export * from "./firestore/calculate-consumption-summary";
 
 /**
  * HTTPS Cloud Functions
  */
 
-// Download user data HTTPS Callable Cloud Function
-exports.downloadUserData = downloadUserDataHttps;
+export * from "./https/download-user-data";

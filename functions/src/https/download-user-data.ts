@@ -1,9 +1,19 @@
+import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import * as functions from "firebase-functions";
-import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../constants";
 import * as admin from "firebase-admin";
+import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
 import * as Path from "path";
 
-export default functions.region(preferredRegion).https.onCall(async (data, context) => {
+// Initialize Firebase Admin SDK
+initializeAppIfNeeded();
+
+/**
+ * [downloadUserData]
+ * A HTTPS Callable Cloud Function.
+ * This functions aggregates all Firestore documents which are associated with the user
+ * and responds a JSON object containing the relevant information.
+ */
+export const downloadUserData = functions.region(preferredRegion).https.onCall(async (data, context) => {
   // Check if auth is not available
   if (!context.auth) {
     // Throw failed precondition error

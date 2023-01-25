@@ -1,9 +1,18 @@
+import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import * as functions from "firebase-functions";
-import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../constants";
-import * as Path from "path";
 import * as admin from "firebase-admin";
+import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
+import * as Path from "path";
 
-export default functions
+// Initialize Firebase Admin SDK
+initializeAppIfNeeded();
+
+/**
+ * [calculateCarbonEmission]
+ * A Cloud Function triggered by a document write in the consumptions sub-collection of a user.
+ * This function will calculate the carbon emissions and write it to the corresponding property.
+ */
+export const calculateCarbonEmission = functions
   .region(preferredRegion)
   .firestore.document(Path.join(usersCollectionName, "userId", consumptionsCollectionName, "consumptionId"))
   .onWrite((snapshot, context) =>
