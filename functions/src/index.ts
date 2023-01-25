@@ -12,21 +12,21 @@ initializeApp();
  */
 
 // Delete user data on Firebase user account deletion
-exports["delete-user-data"] = deleteUserDataAuth;
+exports.deleteUserData = deleteUserDataAuth;
 
 /**
  * Firestore Cloud Functions
  */
 
 // Calculate Carbon Emission Firestore Cloud Function
-exports["calculate-carbon-emission"] = calculateCarbonEmissionFirestore;
+exports.calculateCarbonEmission = calculateCarbonEmissionFirestore;
 
 // Calculate Consumption Summary Firestore Cloud Function
-exports["calculate-consumption-summary"] = calculateConsumptionSummaryFirestore;
+exports.calculateConsumptionSummary = calculateConsumptionSummaryFirestore;
 
 /**
  * HTTPS Cloud Functions
  */
 
 // Download user data HTTPS Callable Cloud Function
-exports["download-user-data"] = downloadUserDataHttps;
+exports.downloadUserData = downloadUserDataHttps;
