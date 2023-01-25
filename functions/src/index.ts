@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase-admin";
 import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission.firestore";
 import deleteUserDataAuth from "./auth/delete-user-data.auth";
-import exportUserDataHttps from "./https/export-user-data.https";
+import downloadUserDataHttps from "./https/download-user-data.https";
 import calculateConsumptionSummaryFirestore from "./firestore/calculate-consumption-summary.firestore";
 
 // Initialize Firebase Admin SDK
@@ -28,5 +28,5 @@ exports["calculate-consumption-summary"] = calculateConsumptionSummaryFirestore;
  * HTTPS Cloud Functions
  */
 
-// Export user data HTTPS Callable Cloud Function
-exports["export-user-data"] = exportUserDataHttps;
+// Download user data HTTPS Callable Cloud Function
+exports["download-user-data"] = downloadUserDataHttps;
