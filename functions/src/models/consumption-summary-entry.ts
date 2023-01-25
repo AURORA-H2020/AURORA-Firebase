@@ -1,4 +1,4 @@
-import { ConsumptionCategory } from "./consumption-category.model";
+import { ConsumptionCategory } from "./consumption-category";
 
 /**
  * A consumption summary entry

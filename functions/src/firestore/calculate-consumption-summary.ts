@@ -2,7 +2,7 @@ import * as functions from "firebase-functions";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../constants";
 import * as Path from "path";
 import * as admin from "firebase-admin";
-import { ConsumptionSummary } from "../models/consumption-summary.model";
+import { ConsumptionSummary } from "../models/consumption-summary";
 
 export default functions
   .region(preferredRegion)

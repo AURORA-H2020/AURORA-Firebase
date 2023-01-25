@@ -1,8 +1,8 @@
 import { initializeApp } from "firebase-admin/app";
-import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission.firestore";
-import deleteUserDataAuth from "./auth/delete-user-data.auth";
-import downloadUserDataHttps from "./https/download-user-data.https";
-import calculateConsumptionSummaryFirestore from "./firestore/calculate-consumption-summary.firestore";
+import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission";
+import deleteUserDataAuth from "./auth/delete-user-data";
+import downloadUserDataHttps from "./https/download-user-data";
+import calculateConsumptionSummaryFirestore from "./firestore/calculate-consumption-summary";
 
 // Initialize Firebase Admin SDK
 initializeApp();

@@ -1,4 +1,4 @@
-import { ConsumptionSummaryEntry } from "./consumption-summary-entry.model";
+import { ConsumptionSummaryEntry } from "./consumption-summary-entry";
 
 /**
  * A consumption summary
