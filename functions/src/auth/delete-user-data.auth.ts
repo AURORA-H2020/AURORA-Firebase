@@ -1,12 +1,13 @@
-import { region } from "firebase-functions";
-import { firestore } from "firebase-admin";
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 import { preferredRegion, usersCollectionName } from "../constants";
 
-export default region(preferredRegion)
+export default functions
+  .region(preferredRegion)
   .auth.user()
   .onDelete(async (user) => {
     console.log("Deleting user data", user.uid);
-    const bulkWriter = firestore().bulkWriter();
+    const bulkWriter = admin.firestore().bulkWriter();
     const maximumRetryAttempts = 3;
     bulkWriter.onWriteError((error) => {
       if (error.failedAttempts < maximumRetryAttempts) {
@@ -16,6 +17,8 @@ export default region(preferredRegion)
         return false;
       }
     });
-    await firestore().recursiveDelete(firestore().collection(usersCollectionName).doc(user.uid), bulkWriter);
+    await admin
+      .firestore()
+      .recursiveDelete(admin.firestore().collection(usersCollectionName).doc(user.uid), bulkWriter);
     console.log("Successfully deleted user data", user.uid);
   });

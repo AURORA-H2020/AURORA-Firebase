@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
 import calculateCarbonEmissionFirestore from "./firestore/calculate-carbon-emission.firestore";
 import deleteUserDataAuth from "./auth/delete-user-data.auth";
 import downloadUserDataHttps from "./https/download-user-data.https";

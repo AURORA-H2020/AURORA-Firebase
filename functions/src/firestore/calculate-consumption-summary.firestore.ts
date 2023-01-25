@@ -1,14 +1,15 @@
-import { Change, EventContext, region } from "firebase-functions";
+import * as functions from "firebase-functions";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../constants";
 import * as Path from "path";
-import { firestore } from "firebase-admin";
-import DocumentSnapshot = firestore.DocumentSnapshot;
+import * as admin from "firebase-admin";
 import { ConsumptionSummary } from "../models/consumption-summary.model";
 
-export default region(preferredRegion)
+export default functions
+  .region(preferredRegion)
   .firestore.document(Path.join(usersCollectionName, "userId", consumptionsCollectionName, "consumptionId"))
   .onWrite(async (snapshot, context) =>
-    firestore()
+    admin
+      .firestore()
       .doc(Path.join(usersCollectionName, context.params.userId))
       .update("consumptionSummary", calculateConsumptionSummary(snapshot, context))
   );
@@ -19,8 +20,8 @@ export default region(preferredRegion)
  * @param context The event context.
  */
 async function calculateConsumptionSummary(
-  snapshot: Change<DocumentSnapshot>,
-  context: EventContext<Record<string, string>>
+  snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
+  context: functions.EventContext<Record<string, string>>
 ): Promise<ConsumptionSummary> {
   // TODO: Correctly calculate consumption summary
   return {
