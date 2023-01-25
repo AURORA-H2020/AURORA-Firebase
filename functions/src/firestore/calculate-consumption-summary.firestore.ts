@@ -22,7 +22,7 @@ async function calculateConsumptionSummary(
   snapshot: Change<DocumentSnapshot>,
   context: EventContext<Record<string, string>>
 ): Promise<ConsumptionSummary> {
-  // TODO: Calculate consumption summary
+  // TODO: Correctly calculate consumption summary
   return {
     totalCarbonEmissions: 0.79,
     entries: [

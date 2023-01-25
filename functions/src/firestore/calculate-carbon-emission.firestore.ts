@@ -23,6 +23,6 @@ async function calculateCarbonEmissions(
   snapshot: Change<DocumentSnapshot>,
   context: EventContext<Record<string, string>>
 ): Promise<number> {
-  // TODO: Calculate carbon emission
+  // TODO: Correctly calculate carbon emissions
   return 0.79;
 }
