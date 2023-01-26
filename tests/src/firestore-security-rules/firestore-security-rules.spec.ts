@@ -88,4 +88,38 @@ describe("Firestore Security Rules", () => {
         assertFails(authenticatedContext.firestore().collection("users").doc("1").delete()));
     });
   });
+
+  describe("/users/consumptions", () => {
+    describe("Authorized User", () => {
+      it("Allow to create a consumption if auth uid matches", () =>
+        assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("consumptions")
+            .add({})
+        ));
+      it("Deny to update a consumption", () =>
+        assertFails(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("consumptions")
+            .doc("1")
+            .update({})
+        ));
+      it("Allow to delete a consumption if auth uid matches", () =>
+        assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("consumptions")
+            .doc("1")
+            .delete()
+        ));
+    });
+  });
 });

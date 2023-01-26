@@ -35,8 +35,12 @@ service cloud.firestore {
 
         // Access-Rules for consumptions subcollection
         match /consumptions/{consumptionID} {
-          // Allow list if auth uid matches with the userId
-          allow list: if request.auth.uid == userId;
+          // Allow read if auth uid matches with the userId
+          allow read: if request.auth.uid == userId;
+          // Allow create if auth uid matches with the userId
+          allow create: if request.auth.uid == userId;
+          // Deny update
+          allow update: if false;
           // Allow delete if auth uid matches with the userId
           allow delete: if request.auth.uid == userId;
         }
