@@ -15,7 +15,7 @@ initializeAppIfNeeded();
  */
 export const calculateConsumptionSummary = functions
   .region(preferredRegion)
-  .firestore.document(Path.join(usersCollectionName, "userId", consumptionsCollectionName, "consumptionId"))
+  .firestore.document(Path.join(usersCollectionName, "{userId}", consumptionsCollectionName, "{consumptionId}"))
   .onWrite(async (snapshot, context) =>
     admin
       .firestore()

@@ -14,7 +14,7 @@ initializeAppIfNeeded();
  */
 export const calculateCarbonEmission = functions
   .region(preferredRegion)
-  .firestore.document(Path.join(usersCollectionName, "userId", consumptionsCollectionName, "consumptionId"))
+  .firestore.document(Path.join(usersCollectionName, "{userId}", consumptionsCollectionName, "{consumptionId}"))
   .onWrite((snapshot, context) =>
     admin
       .firestore()
