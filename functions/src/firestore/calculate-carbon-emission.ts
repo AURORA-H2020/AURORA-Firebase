@@ -8,28 +8,29 @@ import * as Path from "path";
 initializeAppIfNeeded();
 
 /**
- * [calculateCarbonEmission]
+ * [calculateCarbonEmissions]
  * A Cloud Function triggered by a document write in the consumptions sub-collection of a user.
  * This function will calculate the carbon emissions and write it to the corresponding property.
  */
-export const calculateCarbonEmission = functions
+export const calculateCarbonEmissions = functions
   .region(preferredRegion)
   .firestore.document(Path.join(usersCollectionName, "{userId}", consumptionsCollectionName, "{consumptionId}"))
-  .onWrite((snapshot, context) =>
-    admin
+  .onWrite(async (snapshot, context) => {
+    const calculatedCarbonEmissions = await carbonEmissions(snapshot, context);
+    await admin
       .firestore()
       .doc(
         Path.join(usersCollectionName, context.params.userId, consumptionsCollectionName, context.params.consumptionId)
       )
-      .update("carbonEmissions", calculateCarbonEmissions(snapshot, context))
-  );
+      .update({ carbonEmissions: calculatedCarbonEmissions });
+  });
 
 /**
  * Calculate carbon emissions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-async function calculateCarbonEmissions(
+async function carbonEmissions(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
 ): Promise<number> {

@@ -16,12 +16,13 @@ initializeAppIfNeeded();
 export const calculateConsumptionSummary = functions
   .region(preferredRegion)
   .firestore.document(Path.join(usersCollectionName, "{userId}", consumptionsCollectionName, "{consumptionId}"))
-  .onWrite(async (snapshot, context) =>
-    admin
+  .onWrite(async (snapshot, context) => {
+    const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
+    await admin
       .firestore()
       .doc(Path.join(usersCollectionName, context.params.userId))
-      .update("consumptionSummary", consumptionSummary(snapshot, context))
-  );
+      .update({ consumptionSummary: calculatedConsumptionSummary });
+  });
 
 /**
  * Calculate ConsumptionSummary
