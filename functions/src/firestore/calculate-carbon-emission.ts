@@ -85,7 +85,9 @@ async function carbonEmissions(
     }
 
     case "transportation": {
-      const transportEF = getTestValue("transportation","bus","medium",userTestValues.site)
+      const transportationType = snapshot.after.data()?.transportation.transportationType
+      const transportationOccupancy = snapshot.after.data()?.transportation.publicVehicleOccupancy // TODO: Would need to be renamed to "transportationOccupancy", as it is not just for public transport, but also personal cars.
+      const transportEF = getTestValue("transportation",transportationType,transportationOccupancy,userTestValues.site)
       // Since the transport Emission Factor is already in kg CO2 per km, it can simply be multiplied with the kilometer value.
       carbonEmission =  value*transportEF;
       break;
@@ -122,17 +124,17 @@ function getTestValue (
       site: "Denmark",
       electricity: 0.116,
       transportation: {
-        electricBus: {
-          empty: 0.216297,
-          medium: 0.068782,
-          full: 0.040893
+        "electricBus": {
+          "almostEmpty": 0.216297,
+          "medium": 0.068782,
+          "nearlyFull": 0.040893
         },
-        fuelCar: {
-          one: 0.18886,
-          two: 0.07927503,
-          three: 0.057182913,
-          four: 0.046264855,
-          five: 0.03981642
+        "fuelCar": {
+          "one": 0.18886,
+          "two": 0.07927503,
+          "three": 0.057182913,
+          "four": 0.046264855,
+          "five": 0.03981642
         }
       }
     },
@@ -175,11 +177,12 @@ function getTestValue (
     }
   }
 
-  let value = 0
+  
+  let EFvalue = 0
 
   switch (category) {
     case ("electricity"): {
-      value = sites[site as keyof typeof sites].electricity;
+      EFvalue = sites[site as keyof typeof sites].electricity;
       break;
     }
 
@@ -191,15 +194,15 @@ function getTestValue (
       // select  Emission Factor for occupancy of transport type
       const transportEF = transportOccupancy[subsubcategory as keyof typeof transportOccupancy]
 
-      value = transportEF;
+      EFvalue = transportEF;
       break;
     }
 
     case ("heating"): {
-      value = emissionFactorsGlobal.heating[subcategory as keyof typeof emissionFactorsGlobal.heating];
+      EFvalue = emissionFactorsGlobal.heating[subcategory as keyof typeof emissionFactorsGlobal.heating];
     }
   }
 
-  return value
+  return EFvalue
 
 }
