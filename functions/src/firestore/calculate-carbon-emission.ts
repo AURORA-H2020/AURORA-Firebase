@@ -104,13 +104,15 @@ async function carbonEmissions(
       carbonEmission =  1.0;
       break;
 
-    case "electricity":
+    case "electricity": {
       // electricityEF is the "Emission Factor" for electricity. Takes the appropriate value based on the user's site from "sites[site].electricity"
-      let electricityEF = sites[userTestValues.site as keyof typeof sites].electricity
-      //calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
-      let householdSize = userTestValues.householdSize
+      const electricityEF = sites[userTestValues.site as keyof typeof sites].electricity
+      // calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
+      const householdSize = userTestValues.householdSize
       carbonEmission = (value / householdSize) * electricityEF;
       break;
+    }
+      
       
     default:
       break;
