@@ -72,6 +72,7 @@ async function carbonEmissions(
   }
 
   // This currently does not exist in Firebase. Unsure how it should be implemented, but essentially these values are "Global", so applicable across all sites.
+  /**
   const emissionFactorsGlobal = {
     heating: {
       heatingOil: 0.267,
@@ -87,6 +88,7 @@ async function carbonEmissions(
       districtDefault: 0.2652
     }
   }
+  */
 
   // I dont know how to get the users selected site, as it is higher up in the hirarchy than the current snapshot.
   const userTestValues = {
