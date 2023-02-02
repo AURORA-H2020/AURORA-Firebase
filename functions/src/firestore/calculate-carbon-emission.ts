@@ -3,6 +3,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
 import * as Path from "path";
+import { ConsumptionCategory } from '../models/consumption-category'
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -36,10 +37,10 @@ async function carbonEmissions(
 ): Promise<number> {
   // TODO: Correctly calculate carbon emissions
 
-  const consumptionType = snapshot.category
+  const category: ConsumptionCategory = snapshot.after.data()?.category
   let carbonEmission = 0.1
 
-  switch (consumptionType) {
+  switch (category) {
     case "heating":
       carbonEmission = 1.5;
       break;
