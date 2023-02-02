@@ -75,6 +75,7 @@ async function carbonEmissions(
         }
       }
 
+
       // heatingEF is the "Emission Factor" for heating. Takes the appropriate value based on the user's heating type from "emissionFactorsGlobal.heating".
       // const heatingEF = emissionFactorsGlobal.heating[userTestValues.heatingType as keyof typeof emissionFactorsGlobal.heating]
       const householdSize = userTestValues.householdSize
