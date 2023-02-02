@@ -37,7 +37,7 @@ async function carbonEmissions(
   // TODO: Correctly calculate carbon emissions
 
   const consumptionType = snapshot.category
-  let carbonEmission: number = 0.1
+  let carbonEmission = 0.1
 
   switch (consumptionType) {
     case "heating":
