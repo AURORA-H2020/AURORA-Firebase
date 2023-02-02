@@ -35,5 +35,23 @@ async function carbonEmissions(
   context: functions.EventContext<Record<string, string>>
 ): Promise<number> {
   // TODO: Correctly calculate carbon emissions
-  return 0.79;
+
+  const consumptionType = snapshot.category
+  let carbonEmission: number = 0.1
+
+  switch (consumptionType) {
+    case "heating":
+      carbonEmission = 1.5;
+
+    case "transportation":
+      carbonEmission =  1.0;
+
+    case "electricity":
+      carbonEmission =  0.5;
+      
+    default:
+      break;
+
+  }
+  return carbonEmission;
 }
