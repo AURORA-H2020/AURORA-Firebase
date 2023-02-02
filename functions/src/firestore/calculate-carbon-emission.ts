@@ -42,12 +42,15 @@ async function carbonEmissions(
   switch (consumptionType) {
     case "heating":
       carbonEmission = 1.5;
+      break;
 
     case "transportation":
       carbonEmission =  1.0;
+      break;
 
     case "electricity":
       carbonEmission =  0.5;
+      break;
       
     default:
       break;
