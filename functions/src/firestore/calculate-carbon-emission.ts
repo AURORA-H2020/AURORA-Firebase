@@ -38,7 +38,9 @@ async function carbonEmissions(
   // TODO: Correctly calculate carbon emissions
 
   const category: ConsumptionCategory = snapshot.after.data()?.category
-  const value = snapshot.after.data()?.value
+  // For some reason the line below gives me "NaN" values in the calculations, so overriding it for testing purposes with "100"
+  // const value = snapshot.after.data()?.value
+  const value = 100
   let carbonEmission = 0 // This can probably be removed, as there should be no scenario where a value other than electricity, transportation or heating is set as the category.
 
   /**
@@ -64,15 +66,14 @@ async function carbonEmissions(
       switch (userTestValues.heatingType) {
         // If the user has selected "Electric Heating", the electricity values will be used.
         case ("electricHeating"): {
-          heatingEF = getTestValue("electricity","",userTestValues.site)
+          heatingEF = getTestValue("electricity","","",userTestValues.site)
           break;
         }
         // If they use any other type of heating we simply look the Emission Factor up.
         default: {
-          heatingEF = getTestValue("electricity","",userTestValues.site)
+          heatingEF = getTestValue("electricity","","",userTestValues.site)
         }
       }
-
 
       // heatingEF is the "Emission Factor" for heating. Takes the appropriate value based on the user's heating type from "emissionFactorsGlobal.heating".
       // const heatingEF = emissionFactorsGlobal.heating[userTestValues.heatingType as keyof typeof emissionFactorsGlobal.heating]
@@ -82,13 +83,16 @@ async function carbonEmissions(
       break;
     }
 
-    case "transportation":
-      carbonEmission =  1.0;
+    case "transportation": {
+      const transportEF = getTestValue("transportation","bus","medium",userTestValues.site)
+      // Since the transport Emission Factor is already in kg CO2 per km, it can simply be multiplied with the kilometer value.
+      carbonEmission =  value*transportEF;
       break;
+    }
 
     case "electricity": {
       // electricityEF is the "Emission Factor" for electricity. Takes the appropriate value based on the user's site from "sites[site].electricity".
-      const electricityEF = getTestValue("electricity","",userTestValues.site)
+      const electricityEF = getTestValue("electricity","","",userTestValues.site)
       const householdSize = userTestValues.householdSize
       // calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
       carbonEmission = (value / householdSize) * electricityEF;
@@ -105,37 +109,51 @@ async function carbonEmissions(
  */
 
 function getTestValue (
-  category: string,
-  subcategory: string,
+  category: string, // transport, electricity, or heating
+  subcategory: string, // Such as heating source or transport vehicle
+  subsubcategory: string, // Only transport occupancy uses this
   site: string
 ) {
 
   // Copy of the "Sites" collection in Firebase
   const sites = {
     "8yancCd0U8IOTE6VzBEa": {
-      "site": "Denmark",
-      "electricity": 0.116,
-      "transportation": 0.1
+      site: "Denmark",
+      electricity: 0.116,
+      transportation: {
+        electricBus: {
+          empty: 0.216297,
+          medium: 0.068782,
+          full: 0.040893
+        },
+        fuelCar: {
+          one: 0.18886,
+          two: 0.07927503,
+          three: 0.057182913,
+          four: 0.046264855,
+          five: 0.03981642
+        }
+      }
     },
     "YNkAonVX5g9zV2S8Do8b": {
-      "site": "Portugal",
-      "electricity": 0.201,
-      "transportation": 0.1
+      site: "Portugal",
+      electricity: 0.201,
+      transportation: 0.1
     },
     "JqlDcJN6yaVMOM6CxkSo": {
-      "site": "Slovenia",
-      "electricity": 0.219,
-      "transportation": 0.1
+      site: "Slovenia",
+      electricity: 0.219,
+      transportation: 0.1
     },
     "P2dpcsdZns3514ylEP7U": {
-      "site": "Spain",
-      "electricity": 0.19,
-      "transportation": 0.1
+      site: "Spain",
+      electricity: 0.19,
+      transportation: 0.1
     },
     "tR22sHpRRLuEc8R5XQDs": {
-      "site": "UK",
-      "electricity": 0.209,
-      "transportation": 0.1
+      site: "UK",
+      electricity: 0.209,
+      transportation: 0.1
     },
   }
 
@@ -165,7 +183,14 @@ function getTestValue (
     }
 
     case ("transportation"): {
-      value = sites[site as keyof typeof sites].transportation;
+      // select list of transportations by demosite
+      const transportList = sites[site as keyof typeof sites].transportation
+      // select available occupancy levels for given transportation
+      const transportOccupancy = transportList[subcategory as keyof typeof transportList]
+      // select  Emission Factor for occupancy of transport type
+      const transportEF = transportOccupancy[subsubcategory as keyof typeof transportOccupancy]
+
+      value = transportEF;
       break;
     }
 
