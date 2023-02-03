@@ -38,8 +38,8 @@ describe("Firestore Security Rules", () => {
         assertFails(unauthenticatedContext.firestore().collection("sites").doc("1").delete()));
     });
     describe("Authorized User", () => {
-      it("Deny to read a single site", () =>
-        assertFails(authenticatedContext.firestore().collection("sites").doc("1").get()));
+      it("Allow to read a single site", () =>
+        assertSucceeds(authenticatedContext.firestore().collection("sites").doc("1").get()));
       it("Allow to list all sites", () => assertSucceeds(authenticatedContext.firestore().collection("sites").get()));
       it("Deny to create a site", () => assertFails(authenticatedContext.firestore().collection("sites").add({})));
       it("Deny to update a site", () =>

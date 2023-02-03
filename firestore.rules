@@ -10,9 +10,9 @@ service cloud.firestore {
 
     // Access-Rules for sites collection and its subcollections
     match /sites/{siteId} {
-        // Deny single read
-        allow get: if false;
-        // Allow List Read
+        // Allow Get if authenticated
+        allow get: if request.auth != null;
+        // Allow List if authenticated
         allow list: if request.auth != null;
         // Deny Write (Create, Update, Delete)
         allow write: if false;
