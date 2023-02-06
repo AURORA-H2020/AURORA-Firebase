@@ -26,26 +26,30 @@ describe("Firestore Security Rules", () => {
 
   afterEach(() => testEnvironment?.cleanup());
 
-  describe("/sites", () => {
+  describe("/countries", () => {
     describe("Unauthorized User", () => {
-      it("Deny to read a single site", () =>
-        assertFails(unauthenticatedContext.firestore().collection("sites").doc("1").get()));
-      it("Deny to list all sites", () => assertFails(unauthenticatedContext.firestore().collection("sites").get()));
-      it("Deny to create a site", () => assertFails(unauthenticatedContext.firestore().collection("sites").add({})));
-      it("Deny to update a site", () =>
-        assertFails(unauthenticatedContext.firestore().collection("sites").doc("1").update({})));
-      it("Deny to delete a site", () =>
-        assertFails(unauthenticatedContext.firestore().collection("sites").doc("1").delete()));
+      it("Deny to read a single country", () =>
+        assertFails(unauthenticatedContext.firestore().collection("countries").doc("1").get()));
+      it("Deny to list all countries", () =>
+        assertFails(unauthenticatedContext.firestore().collection("countries").get()));
+      it("Deny to create a country", () =>
+        assertFails(unauthenticatedContext.firestore().collection("countries").add({})));
+      it("Deny to update a country", () =>
+        assertFails(unauthenticatedContext.firestore().collection("countries").doc("1").update({})));
+      it("Deny to delete a country", () =>
+        assertFails(unauthenticatedContext.firestore().collection("countries").doc("1").delete()));
     });
     describe("Authorized User", () => {
-      it("Allow to read a single site", () =>
-        assertSucceeds(authenticatedContext.firestore().collection("sites").doc("1").get()));
-      it("Allow to list all sites", () => assertSucceeds(authenticatedContext.firestore().collection("sites").get()));
-      it("Deny to create a site", () => assertFails(authenticatedContext.firestore().collection("sites").add({})));
-      it("Deny to update a site", () =>
-        assertFails(authenticatedContext.firestore().collection("sites").doc("1").update({})));
-      it("Deny to delete a site", () =>
-        assertFails(authenticatedContext.firestore().collection("sites").doc("1").delete()));
+      it("Allow to read a single country", () =>
+        assertSucceeds(authenticatedContext.firestore().collection("countries").doc("1").get()));
+      it("Allow to list all countries", () =>
+        assertSucceeds(authenticatedContext.firestore().collection("countries").get()));
+      it("Deny to create a country", () =>
+        assertFails(authenticatedContext.firestore().collection("countries").add({})));
+      it("Deny to update a country", () =>
+        assertFails(authenticatedContext.firestore().collection("countries").doc("1").update({})));
+      it("Deny to delete a country", () =>
+        assertFails(authenticatedContext.firestore().collection("countries").doc("1").delete()));
     });
   });
 
