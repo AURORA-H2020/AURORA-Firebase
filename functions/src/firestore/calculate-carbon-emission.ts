@@ -47,7 +47,7 @@ async function carbonEmissions(
     throw new Error("User not found");
   }
   else {
-    console.log("Got this user: ", user)
+    console.log("Got this user: ", user);
   }
   // Retrieve the most recent country metric based on the consumptionDate using the property "country" of a user which contains the id of a document
   const metrics = (await admin.firestore()
@@ -112,7 +112,6 @@ async function carbonEmissions(
           break;
         }
       }
-
 
       // heatingEF is the "Emission Factor" for heating. Takes the appropriate value based on the user's heating type from "emissionFactorsGlobal.heating".
       // const heatingEF = emissionFactorsGlobal.heating[userTestValues.heatingType as keyof typeof emissionFactorsGlobal.heating]
