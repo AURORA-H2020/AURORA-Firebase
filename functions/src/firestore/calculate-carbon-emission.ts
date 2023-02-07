@@ -3,7 +3,8 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
 import * as Path from "path";
-import { ConsumptionCategory } from "../models/consumption-category";
+// import { ConsumptionCategory } from "../models/consumption-category";
+// import { Timestamp } from "firebase-admin/firestore";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -37,15 +38,40 @@ async function carbonEmissions(
 ): Promise<number> {
   // TODO: Correctly calculate carbon emissions
 
-  const category: ConsumptionCategory = snapshot.after.data()?.category;
+  const consumption = snapshot.after.data();
+  const consumptionDate = getConsumptionDate(snapshot);
+
+  // First retrieve the user from the users collection by using the "userId" parameter from the path
+  const user = (await admin.firestore().collection("users").doc(context.params.userId).get()).data();
+  if (!user) {
+    throw new Error("User not found");
+  }
+  // Retrieve the most recent country metric based on the consumptionDate using the property "country" of a user which contains the id of a document
+  const metrics = (await admin.firestore()
+    .collection("countries").doc(user.country)
+    .collection("metrics")
+    .where("validFrom", "<", consumptionDate)
+    .orderBy("validFrom", "desc").limit(1)
+    .get()
+    .then(querySnapshot => {
+      if(!querySnapshot.empty) {
+        return querySnapshot.docs[0].data()
+      }
+      else { return null }; // TODO: add standard EU metrics as fallback?
+    }));
+  if (!metrics) {
+    throw new Error("Country not found");
+  }
+  console.log(metrics);
+
+  // const category: ConsumptionCategory = consumption?.category;
   // For some reason the line below gives me "NaN" values in the calculations, so overriding it for testing purposes with "100"
-  const value: number | undefined = snapshot.after.data()?.value
-  console.log("Consumption Value", value)
+  const value: number | undefined = consumption?.value
+  console.log("Consumption Value:", value)
   if (!value) {
     throw Error();
   }
-  // const value = 100
-  let carbonEmission = 0 // This can probably be removed, as there should be no scenario where a value other than electricity, transportation or heating is set as the category.
+  // let carbonEmission = 0 // This can probably be removed, as there should be no scenario where a value other than electricity, transportation or heating is set as the category.
 
   /**
    * I am unsure how to get values from the "sites" collection in Firebase, so I just recreated it here.
@@ -56,25 +82,30 @@ async function carbonEmissions(
   // Additionally, information about "heating type" will need to be included per entry, as well as household size.
   // In the future, these values will default to whatever the user has configured for their household.
   const userTestValues = {
-    site: "8yancCd0U8IOTE6VzBEa",
-    heatingType: "naturalGas",
     householdSize: 1,
   };
 
+  
+
   // Switch statement based on the emission category. Only "heating", "transportation", and "electricity" should be valid options.
-  switch (category) {
+  switch (consumption?.category) {
     case "heating": {
       let heatingEF = 0;
-
-      switch (userTestValues.heatingType) {
+      const heatingData = snapshot.after.data()?.heating
+      switch (heatingData.heatingFuel) {
         // If the user has selected "Electric Heating", the electricity values will be used.
         case "electricHeating": {
-          heatingEF = getTestValue("electricity", "", "", userTestValues.site);
+          heatingEF = metrics.electricity.default;
+          break;
+        }
+        case "district": {
+          heatingEF = metrics.heating[heatingData.districtHeatingSource];
           break;
         }
         // If they use any other type of heating we simply look the Emission Factor up.
         default: {
-          heatingEF = getTestValue("electricity", "", "", userTestValues.site);
+          heatingEF = metrics.heating[heatingData.heatingFuel];
+          break;
         }
       }
 
@@ -82,34 +113,55 @@ async function carbonEmissions(
       // const heatingEF = emissionFactorsGlobal.heating[userTestValues.heatingType as keyof typeof emissionFactorsGlobal.heating]
       const householdSize = userTestValues.householdSize;
       // calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
-      carbonEmission = (value / householdSize) * heatingEF;
-      break;
+      return (value / householdSize) * heatingEF;
     }
 
     case "transportation": {
-      const transportationType = snapshot.after.data()?.transportation.transportationType;
-      const transportationOccupancy = snapshot.after.data()?.transportation.publicVehicleOccupancy; // TODO: Would need to be renamed to "transportationOccupancy", as it is not just for public transport, but also personal cars.
-      const transportEF = getTestValue(
-        "transportation",
-        transportationType,
-        transportationOccupancy,
-        userTestValues.site
-      );
+      let transportEF = 0;
+      const transportationData = snapshot.after.data()?.transportation;
+      const transportationType = transportationData.transportationType;
+      const publicVehicleOccupancy = transportationData.publicVehicleOccupancy; // TODO: Implement types
+      if (publicVehicleOccupancy) {
+        transportEF = metrics.transportation[transportationType][publicVehicleOccupancy];
+      }
+      else {
+        let privateVehicleOccupancy = transportationData.publicVehicleOccupancy;
+        if (!privateVehicleOccupancy) {
+          privateVehicleOccupancy = 1;
+        }
+        else if (privateVehicleOccupancy>5) {
+          if (transportationType in ["motorcycle, electricMotorcycle"]) {
+            privateVehicleOccupancy = 2;
+          }
+          else {
+            privateVehicleOccupancy = 5;
+          }
+        }
+
+        transportEF = metrics.transportation[transportationType][String(privateVehicleOccupancy)];
+
+      }
+
+      switch (transportationType) {
+        case "plane":
+        case "walking":
+        case "bike": {
+          transportEF = metrics.transportation[transportationType]
+        }
+      }
       // Since the transport Emission Factor is already in kg CO2 per km, it can simply be multiplied with the kilometer value.
-      carbonEmission = value * transportEF;
-      break;
+      return value * transportEF;
     }
 
     case "electricity": {
       // electricityEF is the "Emission Factor" for electricity. Takes the appropriate value based on the user's site from "sites[site].electricity".
-      const electricityEF = getTestValue("electricity", "", "", userTestValues.site);
+      const electricityEF = snapshot.after.data()?.heating.default
       const householdSize = userTestValues.householdSize;
       // calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
-      carbonEmission = (value / householdSize) * electricityEF;
-      break;
+      return (value / householdSize) * electricityEF;
     }
   }
-  return carbonEmission;
+  return 0.1337;
 }
 
 /**
@@ -117,77 +169,54 @@ async function carbonEmissions(
  * This entire function only exists as a replacement for the Firebase implementation, which I dont know how to do.
  */
 
-function getTestValue(
+function getConsumptionDate(
+  snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
+) {
+  switch (snapshot.after.data()?.category) {
+    case "heating":
+    case "electricity": {
+      return snapshot.after.data()?.startDate
+    }
+    case "transportation": {
+      return snapshot.after.data()?.dateOfTravel
+    }
+  }
+}
+
+
+/*
+async function getEmissionFactor(
   category: string, // transport, electricity, or heating
+  consumptionDate: Timestamp, 
   subcategory: string, // Such as heating source or transport vehicle
   subsubcategory: string, // Only transport occupancy uses this
-  site: string
-) {
-  // Copy of the "Sites" collection in Firebase
-  const sites = {
-    "8yancCd0U8IOTE6VzBEa": {
-      site: "Denmark",
-      electricity: 0.116,
-      transportation: {
-        electricBus: {
-          almostEmpty: 0.216297,
-          medium: 0.068782,
-          nearlyFull: 0.040893,
-        },
-        fuelCar: {
-          one: 0.18886,
-          two: 0.07927503,
-          three: 0.057182913,
-          four: 0.046264855,
-          five: 0.03981642,
-        },
-      },
-    },
-    YNkAonVX5g9zV2S8Do8b: {
-      site: "Portugal",
-      electricity: 0.201,
-      transportation: 0.1,
-    },
-    JqlDcJN6yaVMOM6CxkSo: {
-      site: "Slovenia",
-      electricity: 0.219,
-      transportation: 0.1,
-    },
-    P2dpcsdZns3514ylEP7U: {
-      site: "Spain",
-      electricity: 0.19,
-      transportation: 0.1,
-    },
-    tR22sHpRRLuEc8R5XQDs: {
-      site: "UK",
-      electricity: 0.209,
-      transportation: 0.1,
-    },
-  };
+  country: string
+): Promise<number> {
 
-  // This currently does not exist in Firebase. Unsure how it should be implemented, but essentially these values are "Global", so applicable across all sites.
-  const emissionFactorsGlobal = {
-    heating: {
-      heatingOil: 0.267,
-      naturalGas: 0.202,
-      liquifiedPetroGas: 0.227,
-      bioMass: 0.118,
-      bioMassLocal: 0,
-      geoThermal: 0.05,
-      solarThermal: 0.0396,
-      districtCoal: 0.354,
-      districtBiomass: 0.118,
-      districtWasteTreatment: 0.5486,
-      districtDefault: 0.2652,
-    },
-  };
+  // Retrieve the most recent country metric based on the consumptionDate using the property "country" of a user which contains the id of a document
+  const metrics = (await admin.firestore()
+    .collection("countries").doc(country)
+    .collection("metrics")
+    .where("validFrom", "<", consumptionDate)
+    .orderBy("validFrom", "desc").limit(1)
+    .get()
+    .then(querySnapshot => {
+      if(!querySnapshot.empty) {
+        return querySnapshot.docs[0]
+      }
+      else { return null }; // TODO: add standard EU metrics as fallback?
+    }));
+  if (!metrics) {
+    throw new Error("Country not found");
+  }
+  console.log(metrics);
+  
 
-  let EFvalue = 0;
+  // let EFvalue = 0;
 
   switch (category) {
     case "electricity": {
-      EFvalue = sites[site as keyof typeof sites].electricity;
-      break;
+      return metrics.data().electricity.default
     }
 
     case "transportation": {
@@ -198,14 +227,12 @@ function getTestValue(
       // select  Emission Factor for occupancy of transport type
       const transportEF = transportOccupancy[subsubcategory as keyof typeof transportOccupancy];
 
-      EFvalue = transportEF;
-      break;
+      return transportEF;
     }
 
     case "heating": {
-      EFvalue = emissionFactorsGlobal.heating[subcategory as keyof typeof emissionFactorsGlobal.heating];
+      return metrics.data().heating[""]
     }
   }
-
-  return EFvalue;
 }
+*/
