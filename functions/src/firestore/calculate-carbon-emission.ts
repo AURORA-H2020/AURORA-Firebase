@@ -47,7 +47,7 @@ async function carbonEmissions(
     throw new Error("User not found");
   }
   else {
-    console.log("Got this user: ", user);
+    console.log("Got this user country ID: ", user.country);
   }
   // Retrieve the most recent country metric based on the consumptionDate using the property "country" of a user which contains the id of a document
   const metrics = (await admin.firestore()
