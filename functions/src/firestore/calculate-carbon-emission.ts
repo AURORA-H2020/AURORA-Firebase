@@ -142,25 +142,26 @@ async function carbonEmissions(
             privateVehicleOccupancy = 5;
           }
         }
-
+        console.log (privateVehicleOccupancy)
         transportEF = metrics.transportation[transportationType][String(privateVehicleOccupancy)];
 
       }
 
+      /*
       switch (transportationType) {
         case "plane":
         case "walking":
         case "bike": {
-          transportEF = metrics.transportation[transportationType]
+          transportEF = metrics.transportation[transportationType]["1"]
         }
-      }
+      }*/
       // Since the transport Emission Factor is already in kg CO2 per km, it can simply be multiplied with the kilometer value.
       return value * transportEF;
     }
 
     case "electricity": {
       // electricityEF is the "Emission Factor" for electricity. Takes the appropriate value based on the user's site from "sites[site].electricity".
-      const electricityEF = snapshot.after.data()?.heating.default
+      const electricityEF = metrics.heating.default
       const householdSize = userTestValues.householdSize;
       // calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
       return (value / householdSize) * electricityEF;
