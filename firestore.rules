@@ -8,14 +8,24 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Access-Rules for sites collection and its subcollections
-    match /sites/{siteId} {
-        // Deny single read
-        allow get: if false;
-        // Allow List Read
+    // Access-Rules for countries collection and its subcollections
+    match /countries/{countryId} {
+        // Allow Get if authenticated
+        allow get: if request.auth != null;
+        // Allow List if authenticated
         allow list: if request.auth != null;
         // Deny Write (Create, Update, Delete)
         allow write: if false;
+
+        // Access-Rules for cities subcollection
+        match /cities/{cityId} {
+          // Allow Get if authenticated
+          allow get: if request.auth != null;
+          // Allow List if authenticated
+          allow list: if request.auth != null;
+          // Deny Write (Create, Update, Delete)
+          allow write: if false;
+        }
     }
 
     // Access-Rules for users collection and its subcollections
