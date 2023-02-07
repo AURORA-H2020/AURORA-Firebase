@@ -55,7 +55,8 @@ async function carbonEmissions(
     .get()
     .then(querySnapshot => {
       if(!querySnapshot.empty) {
-        return querySnapshot.docs[0].data()
+        console.log("Query result:", querySnapshot.docs[0].data());
+        return querySnapshot.docs[0].data();
       }
       else { return null }; // TODO: add standard EU metrics as fallback?
     }));
@@ -66,8 +67,8 @@ async function carbonEmissions(
 
   // const category: ConsumptionCategory = consumption?.category;
   // For some reason the line below gives me "NaN" values in the calculations, so overriding it for testing purposes with "100"
-  const value: number | undefined = consumption?.value
-  console.log("Consumption Value:", value)
+  const value = consumption?.value;
+  console.log("Consumption Value:", value);
   if (!value) {
     throw Error();
   }
