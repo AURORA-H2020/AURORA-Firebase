@@ -40,6 +40,7 @@ async function carbonEmissions(
 
   const consumption = snapshot.after.data();
   const consumptionDate = getConsumptionDate(snapshot);
+  console.log("Consumption Date", consumptionDate)
 
   // First retrieve the user from the users collection by using the "userId" parameter from the path
   const user = (await admin.firestore().collection("users").doc(context.params.userId).get()).data();
