@@ -177,13 +177,14 @@ async function carbonEmissions(
 function getConsumptionDate(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
 ) {
-  switch (snapshot.after.data()?.category) {
+  const consumptionCategory = snapshot.after.data()?.category;
+  switch (consumptionCategory) {
     case "heating":
     case "electricity": {
-      return snapshot.after.data()?.startDate
+      return snapshot.after.data()?.[consumptionCategory].startDate
     }
     case "transportation": {
-      return snapshot.after.data()?.dateOfTravel
+      return snapshot.after.data()?.[consumptionCategory].dateOfTravel
     }
   }
 }
