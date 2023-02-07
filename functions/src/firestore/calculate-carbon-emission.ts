@@ -39,8 +39,12 @@ async function carbonEmissions(
 
   const category: ConsumptionCategory = snapshot.after.data()?.category
   // For some reason the line below gives me "NaN" values in the calculations, so overriding it for testing purposes with "100"
-  // const value = snapshot.after.data()?.value
-  const value = 100
+  const value: number | undefined = snapshot.after.data()?.value
+  console.log("Consumption Value", value)
+  if (!value) {
+    throw Error();
+  }
+  // const value = 100
   let carbonEmission = 0 // This can probably be removed, as there should be no scenario where a value other than electricity, transportation or heating is set as the category.
 
   /**
