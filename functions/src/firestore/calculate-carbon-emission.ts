@@ -52,7 +52,7 @@ async function carbonEmissions(
       /**
        * ///// HEATING CALCULATIONS /////
        */
-      const metrics = getMetrics(user.country, await getConsumptionDate(consumption));
+      const metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
       const heatingData = consumption?.heating;
       const heatingEF = getHeatingEF(heatingData, metrics);
 
@@ -64,7 +64,7 @@ async function carbonEmissions(
      * ///// ELECTRICITY CALCULATIONS /////
      */
     case "electricity": {
-      const metrics = getMetrics(user.country, await getConsumptionDate(consumption));
+      const metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
       const electricityData = consumption?.electricity;
       const electricityEF = getElectricityEF(electricityData, metrics);
 
@@ -75,7 +75,7 @@ async function carbonEmissions(
      * ///// TRANSPORTATION CALCULATIONS /////
      */
     case "transportation": {
-      const metrics = getMetrics(user.country, await getConsumptionDate(consumption));
+      const metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
       const transportationData = consumption?.electricity;
       const transportationEF = getTransportationEF(transportationData, metrics);
 
@@ -108,7 +108,7 @@ async function getConsumptionDate(consumption: admin.firestore.DocumentData | un
  * @param heatingData Part of the consumption relevant to heating.
  * @param metrics Document Data containing all EF values (metrics).
  */
-async function getHeatingEF(heatingData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
+function getHeatingEF(heatingData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
   let heatingEF = 0; // "Emission Factor" for heating
   switch (heatingData.heatingFuel) {
     // If the user has selected "Electric Heating", the electricity values will be used.
@@ -136,7 +136,7 @@ async function getHeatingEF(heatingData: admin.firestore.DocumentData, metrics: 
  * @param electricityData Part of the consumption relevant to electricity.
  * @param metrics Document Data containing all EF values (metrics).
  */
-async function getElectricityEF(electricityData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
+function getElectricityEF(electricityData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
   const electricityEF = metrics.electricity.default;
   return electricityEF;
 }
@@ -147,7 +147,7 @@ async function getElectricityEF(electricityData: admin.firestore.DocumentData, m
  * @param transportationData Part of the consumption relevant to transportation.
  * @param metrics Document Data containing all EF values (metrics).
  */
-async function getTransportationEF(
+function getTransportationEF(
   transportationData: admin.firestore.DocumentData,
   metrics: admin.firestore.DocumentData
 ) {
@@ -194,10 +194,11 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp) {
     .limit(1)
     .get()
     .then((querySnapshot) => {
-      console.log("Query Snapshot", querySnapshot);
       if (!querySnapshot.empty) {
+        console.log(querySnapshot.docs[0].data());
         return querySnapshot.docs[0].data();
       } else {
+        console.log("No Query Snapshot")
         return null;
       } // TODO: add standard EU metrics as fallback?
     });
