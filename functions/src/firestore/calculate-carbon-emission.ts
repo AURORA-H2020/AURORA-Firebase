@@ -3,8 +3,8 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
 import * as Path from "path";
-import { ConsumptionCategory } from "../models/consumption-category";
 import { Timestamp } from "firebase-admin/firestore";
+import { ConsumptionCategory } from "../models/consumption/consumption-category";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -44,8 +44,6 @@ async function carbonEmissions(
 
   // Country to fall back to in case returned EF value is not a number
   const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
-
-  // return getEmissionFactor(user.country, snapshot.after.data());
 
   const consumption = snapshot.after.data();
   const consumptionCategory: ConsumptionCategory = consumption?.category;
@@ -170,13 +168,13 @@ function getElectricityEF(electricityData: admin.firestore.DocumentData, metrics
  * @param metrics Document Data containing all EF values (metrics).
  */
 function getTransportationEF(transportationData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
-  let transportEF = 0; // "Emission Factor" for transportation
+  let transportationEF = 0; // "Emission Factor" for transportation
   const transportationType = transportationData.transportationType;
   const publicVehicleOccupancy = transportationData.publicVehicleOccupancy; // TODO: Implement types
   if (publicVehicleOccupancy) {
-    transportEF = metrics.transportation[transportationType][publicVehicleOccupancy];
+    transportationEF = metrics.transportation[transportationType][publicVehicleOccupancy];
   } else {
-    let privateVehicleOccupancy = transportationData.publicVehicleOccupancy;
+    let privateVehicleOccupancy = transportationData.privateVehicleOccupancy;
     if (!privateVehicleOccupancy) {
       privateVehicleOccupancy = 1;
     } else if (privateVehicleOccupancy > 5) {
@@ -187,11 +185,11 @@ function getTransportationEF(transportationData: admin.firestore.DocumentData, m
       }
     }
     console.log(privateVehicleOccupancy);
-    transportEF = metrics.transportation[transportationType][String(privateVehicleOccupancy)];
+    transportationEF = metrics.transportation[transportationType][String(privateVehicleOccupancy)];
   }
 
   // Since the transport Emission Factor is already in kg CO2 per km, it can simply be multiplied with the kilometer value.
-  return transportationData.value * transportEF;
+  return transportationEF;
 }
 
 /**
