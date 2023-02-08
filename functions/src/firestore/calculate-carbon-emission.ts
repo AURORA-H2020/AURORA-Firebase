@@ -182,6 +182,8 @@ async function getTransportationEF(
  * @param consumptionDate Timestamp of the consumption occurance to get the most viable metric version.
  */
 async function getMetrics(countryID: string, consumptionDate: Timestamp) {
+  console.log("Country ID: ", countryID);
+  console.log("Consumption Date: ", consumptionDate);
   const metrics = await admin
     .firestore()
     .collection("countries")
@@ -192,6 +194,7 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp) {
     .limit(1)
     .get()
     .then((querySnapshot) => {
+      console.log("Query Snapshot", querySnapshot);
       if (!querySnapshot.empty) {
         return querySnapshot.docs[0].data();
       } else {
