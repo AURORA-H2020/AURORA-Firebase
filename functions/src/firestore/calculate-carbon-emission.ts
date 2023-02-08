@@ -3,8 +3,8 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
 import * as Path from "path";
-import { ConsumptionCategory } from "../models/consumption-category";
 import { Timestamp } from "firebase-admin/firestore";
+import { ConsumptionCategory } from "../models/consumption/consumption-category";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -147,10 +147,7 @@ function getElectricityEF(electricityData: admin.firestore.DocumentData, metrics
  * @param transportationData Part of the consumption relevant to transportation.
  * @param metrics Document Data containing all EF values (metrics).
  */
-function getTransportationEF(
-  transportationData: admin.firestore.DocumentData,
-  metrics: admin.firestore.DocumentData
-) {
+function getTransportationEF(transportationData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
   let transportEF = 0; // "Emission Factor" for transportation
   const transportationType = transportationData.transportationType;
   const publicVehicleOccupancy = transportationData.publicVehicleOccupancy; // TODO: Implement types
@@ -198,7 +195,7 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp) {
         console.log(querySnapshot.docs[0].data());
         return querySnapshot.docs[0].data();
       } else {
-        console.log("No Query Snapshot")
+        console.log("No Query Snapshot");
         return null;
       } // TODO: add standard EU metrics as fallback?
     });

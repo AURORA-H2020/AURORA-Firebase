@@ -3,7 +3,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
 import * as Path from "path";
-import { ConsumptionSummary } from "../models/consumption-summary";
+import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
