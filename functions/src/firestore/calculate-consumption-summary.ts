@@ -33,22 +33,53 @@ async function consumptionSummary(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
 ): Promise<ConsumptionSummary> {
-  // TODO: Correctly calculate consumption summary
-  return {
-    totalCarbonEmissions: 0.79,
+  const user = (await admin.firestore().collection("users").doc(context.params.userId).get()).data();
+
+  let consumptionSummary: ConsumptionSummary = user?.consumptionSummary;
+
+  // Create new empty consumption summary if it does not already exist
+  if (!consumptionSummary) {
+    consumptionSummary = newConsumptionSummary();
+  }
+
+  const consumptionCategory = snapshot.after.data()?.category;
+  const consumptionCarbonEmissions = snapshot.after.data()?.carbonEmissions;
+  const consumptionCategorySummaryID = consumptionSummary.entries.findIndex(
+    ({ category }) => category === consumptionCategory
+  );
+
+  // Update consumptionCategory by adding new consumptionValue
+  consumptionSummary.entries[consumptionCategorySummaryID].value += consumptionCarbonEmissions;
+
+  // Sum all carbon emission values in consumption summary
+  let totalCarbonEmissions = 0;
+  consumptionSummary.entries.forEach((item) => {
+    totalCarbonEmissions += item.value;
+  });
+
+  // Update total carbon emissions in consumption summary
+  consumptionSummary.totalCarbonEmissions = totalCarbonEmissions;
+
+  return consumptionSummary;
+}
+
+function newConsumptionSummary() {
+  const newConsumptionSummary: ConsumptionSummary = {
+    totalCarbonEmissions: 0,
     entries: [
       {
         category: "electricity",
-        value: 0.29,
+        value: 0,
       },
       {
         category: "transportation",
-        value: 0.27,
+        value: 0,
       },
       {
         category: "heating",
-        value: 0.44,
+        value: 0,
       },
     ],
   };
+  return newConsumptionSummary;
 }
