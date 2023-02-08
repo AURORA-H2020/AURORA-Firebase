@@ -42,6 +42,9 @@ async function carbonEmissions(
     throw new Error("User not found");
   }
 
+  // Country to fall back to in case returned EF value is not a number
+  const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
+
   // return getEmissionFactor(user.country, snapshot.after.data());
 
   const consumption = snapshot.after.data();
@@ -52,35 +55,54 @@ async function carbonEmissions(
       /**
        * ///// HEATING CALCULATIONS /////
        */
-      const metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
+      let metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
       const heatingData = consumption?.heating;
-      const heatingEF = getHeatingEF(heatingData, metrics);
+      let heatingEF = getHeatingEF(heatingData, metrics);
 
-      // calculation for the carbon emission. Simply takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
-      return (heatingData.value / heatingData.householdSize) * (await heatingEF);
+      // Fallback in case transportationEF is not a Number
+      if (Number.isNaN(heatingEF)) {
+        metrics = await getMetrics(metricsFallbackCountry, await getConsumptionDate(consumption));
+        heatingEF = getHeatingEF(heatingData, metrics);
+      }
+
+      // calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
+      return (consumption?.value / heatingData.householdSize) * heatingEF;
     }
 
     /**
      * ///// ELECTRICITY CALCULATIONS /////
      */
     case "electricity": {
-      const metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
+      let metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
       const electricityData = consumption?.electricity;
-      const electricityEF = getElectricityEF(electricityData, metrics);
+      let electricityEF = getElectricityEF(electricityData, metrics);
 
-      return (electricityData.value / electricityData.householdSize) * (await electricityEF);
+      // Fallback in case transportationEF is not a Number
+      if (Number.isNaN(electricityEF)) {
+        metrics = await getMetrics(metricsFallbackCountry, await getConsumptionDate(consumption));
+        electricityEF = getHeatingEF(electricityData, metrics);
+      }
+
+      // calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
+      return (consumption?.value / electricityData.householdSize) * electricityEF;
     }
 
     /**
      * ///// TRANSPORTATION CALCULATIONS /////
      */
     case "transportation": {
-      const metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
-      const transportationData = consumption?.electricity;
-      const transportationEF = getTransportationEF(transportationData, metrics);
+      let metrics = await getMetrics(user.country, await getConsumptionDate(consumption));
+      const transportationData = consumption?.transportation;
+      let transportationEF = getTransportationEF(transportationData, metrics);
+
+      // Fallback in case transportationEF is not a Number
+      if (Number.isNaN(transportationEF)) {
+        metrics = await getMetrics(metricsFallbackCountry, await getConsumptionDate(consumption));
+        transportationEF = getHeatingEF(transportationData, metrics);
+      }
 
       // Since the transport Emission Factor is already in kg CO2 per km, it can simply be multiplied with the kilometer value.
-      return transportationData.value * (await transportationEF);
+      return consumption?.value * transportationEF;
     }
   }
 }
@@ -147,10 +169,7 @@ function getElectricityEF(electricityData: admin.firestore.DocumentData, metrics
  * @param transportationData Part of the consumption relevant to transportation.
  * @param metrics Document Data containing all EF values (metrics).
  */
-function getTransportationEF(
-  transportationData: admin.firestore.DocumentData,
-  metrics: admin.firestore.DocumentData
-) {
+function getTransportationEF(transportationData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
   let transportEF = 0; // "Emission Factor" for transportation
   const transportationType = transportationData.transportationType;
   const publicVehicleOccupancy = transportationData.publicVehicleOccupancy; // TODO: Implement types
@@ -182,8 +201,6 @@ function getTransportationEF(
  * @param consumptionDate Timestamp of the consumption occurance to get the most viable metric version.
  */
 async function getMetrics(countryID: string, consumptionDate: Timestamp) {
-  console.log("Country ID: ", countryID);
-  console.log("Consumption Date: ", consumptionDate);
   const metrics = await admin
     .firestore()
     .collection("countries")
@@ -195,10 +212,8 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp) {
     .get()
     .then((querySnapshot) => {
       if (!querySnapshot.empty) {
-        console.log(querySnapshot.docs[0].data());
         return querySnapshot.docs[0].data();
       } else {
-        console.log("No Query Snapshot")
         return null;
       } // TODO: add standard EU metrics as fallback?
     });
