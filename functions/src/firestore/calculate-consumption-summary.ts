@@ -70,8 +70,8 @@ async function consumptionSummary(
   return consumptionSummary;
 }
 
-function newConsumptionSummary() {
-  const newConsumptionSummary: ConsumptionSummary = {
+function newConsumptionSummary(): ConsumptionSummary {
+  return {
     totalCarbonEmissions: 0,
     entries: [
       {
@@ -88,5 +88,4 @@ function newConsumptionSummary() {
       },
     ],
   };
-  return newConsumptionSummary;
 }
