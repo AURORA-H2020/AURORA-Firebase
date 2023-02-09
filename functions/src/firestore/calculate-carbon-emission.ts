@@ -117,7 +117,7 @@ async function carbonEmissions(
       let heatingEF = getHeatingEF(heatingData, metrics);
 
       // Fallback in case transportationEF is not a Number
-      if (Number.isNaN(heatingEF)) {
+      if (!heatingEF) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
@@ -146,14 +146,9 @@ async function carbonEmissions(
       let electricityEF = getElectricityEF(electricityData, metrics);
 
       // Fallback in case electricityEF is NaN
-      if (Number.isNaN(electricityEF)) {
+      if (!electricityEF) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
-      }
-
-      // Exit function if still undefined
-      if (!electricityEF) {
-        return undefined;
       }
 
       // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
@@ -180,7 +175,7 @@ async function carbonEmissions(
       let transportationEF = getTransportationEF(transportationData, metrics);
 
       // Fallback in case transportationEF is not a Number
-      if (Number.isNaN(transportationEF)) {
+      if (!transportationEF) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         transportationEF = getTransportationEF(transportationData, metrics);
       }
