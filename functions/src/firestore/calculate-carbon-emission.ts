@@ -5,6 +5,7 @@ import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-
 import { Timestamp } from "firebase-admin/firestore";
 import { ConsumptionCategory } from "../models/consumption/consumption-category";
 import { FirestoreCollections } from "../utils/firestore-collections";
+import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -22,12 +23,28 @@ export const calculateCarbonEmissions = functions
     )
   )
   .onWrite(async (snapshot, context) => {
+    // Calculate carbon emissions
     const calculatedCarbonEmissions = await carbonEmissions(snapshot, context);
-    await admin
-      .firestore()
-      .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
-      .doc(context.params.consumptionId)
-      .update({ carbonEmissions: calculatedCarbonEmissions });
+    // Check if carbon emissions are available
+    if (calculatedCarbonEmissions) {
+      // Update consumption and set calculated carbon emissions
+      await admin
+        .firestore()
+        .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
+        .doc(context.params.consumptionId)
+        .update({ carbonEmissions: calculatedCarbonEmissions });
+    }
+    // Calculate consumption summary
+    const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
+    // Check if consumption summary is available
+    if (calculatedConsumptionSummary) {
+      // Update consumption summary
+      await admin
+        .firestore()
+        .collection(FirestoreCollections.users.name)
+        .doc(context.params.userId)
+        .update({ consumptionSummary: calculatedConsumptionSummary });
+    }
   });
 
 /**
@@ -38,7 +55,14 @@ export const calculateCarbonEmissions = functions
 async function carbonEmissions(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
-): Promise<number> {
+): Promise<number | undefined> {
+  // Check if document has been deleted
+  if (!snapshot.after.exists) {
+    // Return undefined as document has been deleted
+    // and therefore a calculation is not needed
+    return undefined;
+  }
+
   // First retrieve the user from the users collection by using the "userId" parameter from the path
   const user = (
     await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
@@ -51,6 +75,13 @@ async function carbonEmissions(
   const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
 
   const consumption = snapshot.after.data();
+
+  // Check if carbon emissions are available on a consumption
+  if (consumption?.carbonEmissions) {
+    // Return undefined as calculating the carbon emissions is not needed
+    return undefined;
+  }
+
   const consumptionCategory: ConsumptionCategory = consumption?.category;
 
   switch (consumptionCategory) {
@@ -224,4 +255,65 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp) {
     throw new Error("Country not found");
   }
   return metrics;
+}
+
+/**
+ * Calculate ConsumptionSummary
+ * @param snapshot The document snapshot.
+ * @param context The event context.
+ */
+async function consumptionSummary(
+  snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
+  context: functions.EventContext<Record<string, string>>
+): Promise<ConsumptionSummary | undefined> {
+  const user = (
+    await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
+  ).data();
+
+  let consumptionSummary: ConsumptionSummary = user?.consumptionSummary;
+
+  // Create new empty consumption summary if it does not already exist
+  if (!consumptionSummary) {
+    consumptionSummary = newConsumptionSummary();
+  }
+
+  const consumptionCategory = snapshot.after.data()?.category;
+  const consumptionCarbonEmissions = snapshot.after.data()?.carbonEmissions;
+  const consumptionCategorySummaryID = consumptionSummary.entries.findIndex(
+    ({ category }) => category === consumptionCategory
+  );
+
+  // Update consumptionCategory by adding new consumptionValue
+  consumptionSummary.entries[consumptionCategorySummaryID].value += consumptionCarbonEmissions;
+
+  // Sum all carbon emission values in consumption summary
+  let totalCarbonEmissions = 0;
+  consumptionSummary.entries.forEach((item) => {
+    totalCarbonEmissions += item.value;
+  });
+
+  // Update total carbon emissions in consumption summary
+  consumptionSummary.totalCarbonEmissions = totalCarbonEmissions;
+
+  return consumptionSummary;
+}
+
+function newConsumptionSummary(): ConsumptionSummary {
+  return {
+    totalCarbonEmissions: 0,
+    entries: [
+      {
+        category: "electricity",
+        value: 0,
+      },
+      {
+        category: "transportation",
+        value: 0,
+      },
+      {
+        category: "heating",
+        value: 0,
+      },
+    ],
+  };
 }
