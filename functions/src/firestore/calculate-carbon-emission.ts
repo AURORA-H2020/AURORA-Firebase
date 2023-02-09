@@ -321,17 +321,20 @@ async function consumptionSummary(
     await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
   ).data() as User;
 
-  let consumptionSummary = user.consumptionSummary as ConsumptionSummary;
+  let consumptionSummary: ConsumptionSummary | undefined;
+
+  // Create new empty consumption summary if it does not already exist
+  if (!user.consumptionSummary) {
+    consumptionSummary = newConsumptionSummary();
+  }
+  else {
+    consumptionSummary = user.consumptionSummary;
+  }
 
   const consumptionCategory = snapshot.after.data()?.category;
   const consumptionCategorySummaryID = consumptionSummary.entries.findIndex(
     ({ category }) => category === consumptionCategory
   );
-
-  // Create new empty consumption summary if it does not already exist
-  if (!consumptionSummary) {
-    consumptionSummary = newConsumptionSummary();
-  }
 
   // Update consumptionCategory by adding new consumptionValue
   if (consumptionSummary.entries[consumptionCategorySummaryID].value) {
