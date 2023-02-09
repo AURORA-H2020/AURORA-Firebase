@@ -204,18 +204,26 @@ function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firest
       return getElectricityEF(heatingData, metrics);
     }
     case "district": {
-      if (heatingData?.districtHeatingSource === "electric") {
-        return metrics.electricity.default;
+      if (heatingData.districtHeatingSource === "electric") {
+        return getElectricityEF(heatingData, metrics);
       } else {
         if (heatingData.districtHeatingSource) {
-          return metrics.heating[heatingData.districtHeatingSource];
+          if (metrics.heating && heatingData.districtHeatingSource in metrics.heating) {
+            return metrics.heating[heatingData.districtHeatingSource];
+          } else {
+            return undefined;
+          }
         }
       }
       break;
     }
     // If consumption has any other type of heating, simply look the Emission Factor up.
     default: {
-      return metrics.heating[heatingData.heatingFuel];
+      if (metrics.heating && heatingData.heatingFuel in metrics.heating) {
+        return metrics.heating[heatingData.heatingFuel];
+      } else {
+        return undefined;
+      }
     }
   }
 }
@@ -247,7 +255,12 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
 
   const transportationType = transportationData?.transportationType;
   const publicVehicleOccupancy = transportationData?.publicVehicleOccupancy;
-  if (publicVehicleOccupancy && transportationType) {
+  if (
+    publicVehicleOccupancy &&
+    transportationType &&
+    metrics.transportation &&
+    transportationType in metrics.transportation
+  ) {
     return metrics.transportation[transportationType][publicVehicleOccupancy];
   } else {
     let privateVehicleOccupancy = transportationData.privateVehicleOccupancy;
@@ -260,7 +273,11 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
         privateVehicleOccupancy = 5;
       }
     }
-    return metrics.transportation[transportationType][String(privateVehicleOccupancy)];
+    if (metrics.transportation && transportationType in metrics.transportation) {
+      return metrics.transportation[transportationType][String(privateVehicleOccupancy)];
+    } else {
+      return undefined;
+    }
   }
 }
 
@@ -303,13 +320,16 @@ async function consumptionSummary(
   context: functions.EventContext<Record<string, string>>
 ): Promise<ConsumptionSummary | undefined> {
   let consumptionCarbonEmissions: number;
+  let consumptionCategory: string;
 
   if (!snapshot.after.exists) {
     // If action is delete, get emission value before and make negative
     consumptionCarbonEmissions = snapshot.before.data()?.carbonEmissions;
     consumptionCarbonEmissions *= -1;
+    consumptionCategory = snapshot.before.data()?.category;
   } else {
     consumptionCarbonEmissions = snapshot.after.data()?.carbonEmissions;
+    consumptionCategory = snapshot.after.data()?.category;
   }
 
   if (!consumptionCarbonEmissions) {
@@ -326,12 +346,10 @@ async function consumptionSummary(
   // Create new empty consumption summary if it does not already exist
   if (!user.consumptionSummary) {
     consumptionSummary = newConsumptionSummary();
-  }
-  else {
+  } else {
     consumptionSummary = user.consumptionSummary;
   }
 
-  const consumptionCategory = snapshot.after.data()?.category;
   const consumptionCategorySummaryID = consumptionSummary.entries.findIndex(
     ({ category }) => category === consumptionCategory
   );
