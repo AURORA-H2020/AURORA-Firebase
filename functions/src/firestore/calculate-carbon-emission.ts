@@ -3,12 +3,12 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-region";
 import { Timestamp } from "firebase-admin/firestore";
-// import { ConsumptionCategory } from "../models/consumption/consumption-category";
 import { FirestoreCollections } from "../utils/firestore-collections";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
 import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import { CountryMetric } from "../models/country/metric/country-metric";
+// import { firestore } from "firebase-admin";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -151,6 +151,11 @@ async function carbonEmissions(
         electricityEF = getElectricityEF(electricityData, metrics);
       }
 
+      // Exit function if still undefined
+      if (!electricityEF) {
+        return undefined;
+      }
+
       // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
       return (consumption.value / electricityData.householdSize) * electricityEF;
     }
@@ -201,7 +206,7 @@ function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firest
   switch (heatingFuel) {
     // If the user has selected "Electric Heating", the electricity values will be used.
     case "electric": {
-      return metrics.electricity.default;
+      return getElectricityEF(heatingData, metrics);
     }
     case "district": {
       if (heatingData?.districtHeatingSource === "electric") {
@@ -227,8 +232,10 @@ function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firest
  * @param metrics Document Data containing all EF values (metrics).
  */
 function getElectricityEF(electricityData: Consumption["electricity"], metrics: admin.firestore.DocumentData) {
-  const electricityEF = metrics.electricity.default;
-  return electricityEF;
+  if (!metrics.electricity) {
+    return undefined;
+  }
+  return metrics.electricity.default;
 }
 
 /**
@@ -237,11 +244,15 @@ function getElectricityEF(electricityData: Consumption["electricity"], metrics: 
  * @param transportationData Part of the consumption relevant to transportation.
  * @param metrics Document Data containing all EF values (metrics).
  */
-function getTransportationEF(transportationData: admin.firestore.DocumentData, metrics: admin.firestore.DocumentData) {
+function getTransportationEF(transportationData: Consumption["transportation"], metrics: admin.firestore.DocumentData) {
   // let transportationEF: number; // "Emission Factor" for transportation
-  const transportationType = transportationData.transportationType;
-  const publicVehicleOccupancy = transportationData.publicVehicleOccupancy; // TODO: Implement types
-  if (publicVehicleOccupancy) {
+  if (!transportationData) {
+    return undefined;
+  }
+
+  const transportationType = transportationData?.transportationType;
+  const publicVehicleOccupancy = transportationData?.publicVehicleOccupancy;
+  if (publicVehicleOccupancy && transportationType) {
     return metrics.transportation[transportationType][publicVehicleOccupancy];
   } else {
     let privateVehicleOccupancy = transportationData.privateVehicleOccupancy;
@@ -254,7 +265,6 @@ function getTransportationEF(transportationData: admin.firestore.DocumentData, m
         privateVehicleOccupancy = 5;
       }
     }
-    console.log(privateVehicleOccupancy);
     return metrics.transportation[transportationType][String(privateVehicleOccupancy)];
   }
 }
