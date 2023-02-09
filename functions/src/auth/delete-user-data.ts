@@ -1,7 +1,8 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { preferredRegion, usersCollectionName } from "../utils/constants";
+import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-region";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
+import { FirestoreCollections } from "../utils/firestore-collections";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -13,7 +14,7 @@ initializeAppIfNeeded();
  * associated with the deleted user.
  */
 export const deleteUserData = functions
-  .region(preferredRegion)
+  .region(PreferredCloudFunctionRegion)
   .auth.user()
   .onDelete(async (user) => {
     console.log("Deleting user data", user.uid);
@@ -29,6 +30,6 @@ export const deleteUserData = functions
     });
     await admin
       .firestore()
-      .recursiveDelete(admin.firestore().collection(usersCollectionName).doc(user.uid), bulkWriter);
+      .recursiveDelete(admin.firestore().collection(FirestoreCollections.users.name).doc(user.uid), bulkWriter);
     console.log("Successfully deleted user data", user.uid);
   });
