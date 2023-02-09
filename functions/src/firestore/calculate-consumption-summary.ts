@@ -1,9 +1,9 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
-import * as Path from "path";
+import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-region";
 import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
+import { FirestoreCollections } from "../utils/firestore-collections";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -14,13 +14,18 @@ initializeAppIfNeeded();
  * This function will calculate the consumption summary and write it to the corresponding property.
  */
 export const calculateConsumptionSummary = functions
-  .region(preferredRegion)
-  .firestore.document(Path.join(usersCollectionName, "{userId}", consumptionsCollectionName, "{consumptionId}"))
+  .region(PreferredCloudFunctionRegion)
+  .firestore.document(
+    [FirestoreCollections.users.name, "{userId}", FirestoreCollections.users.consumptions.name, "{consumptionId}"].join(
+      "/"
+    )
+  )
   .onWrite(async (snapshot, context) => {
     const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
     await admin
       .firestore()
-      .doc(Path.join(usersCollectionName, context.params.userId))
+      .collection(FirestoreCollections.users.name)
+      .doc(context.params.userId)
       .update({ consumptionSummary: calculatedConsumptionSummary });
   });
 
@@ -33,7 +38,9 @@ async function consumptionSummary(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
 ): Promise<ConsumptionSummary> {
-  const user = (await admin.firestore().collection("users").doc(context.params.userId).get()).data();
+  const user = (
+    await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
+  ).data();
 
   let consumptionSummary: ConsumptionSummary = user?.consumptionSummary;
 

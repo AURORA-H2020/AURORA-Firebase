@@ -1,8 +1,8 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
-import * as Path from "path";
+import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-region";
+import { FirestoreCollections } from "../utils/firestore-collections";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -14,7 +14,7 @@ initializeAppIfNeeded();
  * and responds a JSON object containing the relevant information.
  */
 export const downloadUserData = functions
-  .region(preferredRegion)
+  .region(PreferredCloudFunctionRegion)
   .runWith({
     // TODO: Enable as soon AppCheck is enabled in the apps
     enforceAppCheck: false,
@@ -26,7 +26,9 @@ export const downloadUserData = functions
       throw new functions.https.HttpsError("failed-precondition", "The function must be called while authenticated");
     }
     // Retrieve user data
-    const user = (await admin.firestore().doc(Path.join(usersCollectionName, context.auth.uid)).get()).data();
+    const user = (
+      await admin.firestore().collection(FirestoreCollections.users.name).doc(context.auth.uid).get()
+    ).data();
     // Check if user data is unavailable
     if (!user) {
       // Throw not found error
@@ -34,10 +36,7 @@ export const downloadUserData = functions
     }
     // Retrieve consumptions data
     const consumptions = (
-      await admin
-        .firestore()
-        .collection(Path.join(usersCollectionName, context.auth.uid, consumptionsCollectionName))
-        .get()
+      await admin.firestore().collection(FirestoreCollections.users.consumptions.path(context.auth.uid)).get()
     ).docs.map((doc) => doc.data());
     // Return data
     return {

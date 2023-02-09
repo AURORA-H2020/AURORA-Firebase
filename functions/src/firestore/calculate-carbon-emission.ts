@@ -1,10 +1,10 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { consumptionsCollectionName, preferredRegion, usersCollectionName } from "../utils/constants";
-import * as Path from "path";
+import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-region";
 import { Timestamp } from "firebase-admin/firestore";
 import { ConsumptionCategory } from "../models/consumption/consumption-category";
+import { FirestoreCollections } from "../utils/firestore-collections";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -15,15 +15,18 @@ initializeAppIfNeeded();
  * This function will calculate the carbon emissions and write it to the corresponding property.
  */
 export const calculateCarbonEmissions = functions
-  .region(preferredRegion)
-  .firestore.document(Path.join(usersCollectionName, "{userId}", consumptionsCollectionName, "{consumptionId}"))
+  .region(PreferredCloudFunctionRegion)
+  .firestore.document(
+    [FirestoreCollections.users.name, "{userId}", FirestoreCollections.users.consumptions.name, "{consumptionId}"].join(
+      "/"
+    )
+  )
   .onWrite(async (snapshot, context) => {
     const calculatedCarbonEmissions = await carbonEmissions(snapshot, context);
     await admin
       .firestore()
-      .doc(
-        Path.join(usersCollectionName, context.params.userId, consumptionsCollectionName, context.params.consumptionId)
-      )
+      .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
+      .doc(context.params.consumptionId)
       .update({ carbonEmissions: calculatedCarbonEmissions });
   });
 
@@ -37,7 +40,9 @@ async function carbonEmissions(
   context: functions.EventContext<Record<string, string>>
 ): Promise<number> {
   // First retrieve the user from the users collection by using the "userId" parameter from the path
-  const user = (await admin.firestore().collection("users").doc(context.params.userId).get()).data();
+  const user = (
+    await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
+  ).data();
   if (!user) {
     throw new Error("User not found");
   }
@@ -201,9 +206,9 @@ function getTransportationEF(transportationData: admin.firestore.DocumentData, m
 async function getMetrics(countryID: string, consumptionDate: Timestamp) {
   const metrics = await admin
     .firestore()
-    .collection("countries")
+    .collection(FirestoreCollections.countries.name)
     .doc(countryID)
-    .collection("metrics")
+    .collection(FirestoreCollections.countries.metrics.name)
     .where("validFrom", "<", consumptionDate)
     .orderBy("validFrom", "desc")
     .limit(1)
