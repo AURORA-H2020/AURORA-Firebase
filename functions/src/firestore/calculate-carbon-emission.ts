@@ -350,6 +350,7 @@ async function consumptionSummary(
     consumptionSummary = user.consumptionSummary;
   }
 
+  // Find the list index of consumptionSummary for the current consumptionCategory
   const consumptionCategorySummaryID = consumptionSummary.entries.findIndex(
     ({ category }) => category === consumptionCategory
   );
@@ -369,17 +370,14 @@ async function consumptionSummary(
   });
 
   // Calculate percentages for carbon emission categories
-  if (totalCarbonEmissions) {
+  if (totalCarbonEmissions && totalCarbonEmissions > 0) {
     consumptionSummary.entries.forEach((item) => {
-      item.value = item.absoluteValue/totalCarbonEmissions;
+      item.value = item.absoluteValue / totalCarbonEmissions;
     });
+  } else {
+    // Return an empty Consumption Summary if totalCarbonEmissions is zero
+    return newConsumptionSummary();
   }
-  else {
-    return undefined;
-  }
-  
-
-  
 
   // Update total carbon emissions in consumption summary
   consumptionSummary.totalCarbonEmissions = totalCarbonEmissions;
