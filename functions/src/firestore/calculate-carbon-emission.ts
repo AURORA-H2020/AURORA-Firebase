@@ -48,7 +48,6 @@ export const calculateCarbonEmissions = functions
         .doc(context.params.userId)
         .update({ consumptionSummary: calculatedConsumptionSummary });
     }
-    copyMetrics();
   });
 
 /**
@@ -409,6 +408,12 @@ function newConsumptionSummary(): ConsumptionSummary {
   };
 }
 
+/**
+ * [copyMetrics]
+ * This function is commented out intentionally.
+ * It is only used for copying metrics from one country to multiple others to avoid excessive work on the Firestore visual editor.
+ */
+/*
 async function copyMetrics() {
   const db = admin.firestore().collection(FirestoreCollections.countries.name);
   const listOfCountries = [
@@ -435,3 +440,4 @@ async function copyMetrics() {
       });
     });
 }
+*/
