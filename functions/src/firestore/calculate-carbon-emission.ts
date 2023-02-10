@@ -122,7 +122,7 @@ async function carbonEmissions(
         heatingEF = getHeatingEF(heatingData, metrics);
       }
       // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
-      return (consumption.value / heatingData.householdSize) * heatingEF;
+      return ((consumption.value / heatingData.householdSize) * heatingEF) ?? undefined;
     }
 
     /**
@@ -152,7 +152,7 @@ async function carbonEmissions(
       }
 
       // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
-      return (consumption.value / electricityData.householdSize) * electricityEF;
+      return ((consumption.value / electricityData.householdSize) * electricityEF) ?? undefined;
     }
 
     /**
@@ -180,8 +180,13 @@ async function carbonEmissions(
         transportationEF = getTransportationEF(transportationData, metrics);
       }
 
-      // Transport Emission Factor is in kg CO2 per km, so it is just multiplied with the value given kilometer.
-      return consumption.value * transportationEF;
+      if (transportationData.transportationType === "plane" && transportationEF) {
+        // Only if transportation type is "plane", return just the Emission Factor, as it is constant per capita
+        return transportationEF;
+      } else {
+        // For all other transportation types: Transport Emission Factor is in kg CO2 per km, so it is just multiplied with the value given in kilometer.
+        return (consumption.value * transportationEF) ?? undefined;
+      }
     }
   }
 }
@@ -266,10 +271,10 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
     let privateVehicleOccupancy = transportationData.privateVehicleOccupancy;
     if (!privateVehicleOccupancy) {
       privateVehicleOccupancy = 1;
-    } else if (privateVehicleOccupancy > 5) {
+    } else if (privateVehicleOccupancy > 2) {
       if (transportationType in ["motorcycle, electricMotorcycle"]) {
         privateVehicleOccupancy = 2;
-      } else {
+      } else if (privateVehicleOccupancy > 5){
         privateVehicleOccupancy = 5;
       }
     }
