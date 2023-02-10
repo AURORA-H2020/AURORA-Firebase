@@ -12,5 +12,6 @@ export interface Consumption {
   heating?: ConsumptionHeating;
   transportation?: ConsumptionTransportation;
   value: number;
+  description?: string;
   carbonEmissions?: number;
 }
