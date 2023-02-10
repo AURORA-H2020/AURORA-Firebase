@@ -6,4 +6,5 @@ import { ConsumptionCategory } from "../consumption/consumption-category";
 export interface ConsumptionSummaryEntry {
   category: ConsumptionCategory;
   value: number;
+  absoluteValue: number;
 }
