@@ -48,6 +48,7 @@ export const calculateCarbonEmissions = functions
         .doc(context.params.userId)
         .update({ consumptionSummary: calculatedConsumptionSummary });
     }
+    copyMetrics();
   });
 
 /**
@@ -406,4 +407,31 @@ function newConsumptionSummary(): ConsumptionSummary {
       },
     ],
   };
+}
+
+async function copyMetrics() {
+  const db = admin.firestore().collection(FirestoreCollections.countries.name);
+  const listOfCountries = [
+    "2E9Ejc8qBJC6HnlPPdIh",
+    "4sq82jNQm3x3bH9Fkijm",
+    "8mgi5IR4xn9Yca4zDLtU",
+    "KhUolhyvcbdEsPyREqOZ",
+    "udn3GiM30aqviGBkswpl",
+  ];
+  db.doc("sPXh74wjZf14Jtmkaas6")
+    .collection(FirestoreCollections.countries.metrics.name)
+    .get()
+    .then((snapshot) => {
+      const euMetricData = snapshot.docs[0].data();
+      listOfCountries.forEach((item) => {
+        const setDoc = db
+          .doc(item)
+          .collection(FirestoreCollections.countries.metrics.name)
+          .doc(snapshot.docs[0].id)
+          .set(euMetricData);
+        setDoc.then((res) => {
+          console.log("Set: ", res);
+        });
+      });
+    });
 }
