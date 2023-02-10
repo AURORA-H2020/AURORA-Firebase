@@ -355,18 +355,31 @@ async function consumptionSummary(
   );
 
   // Update consumptionCategory by adding new consumptionValue
-  if (consumptionSummary.entries[consumptionCategorySummaryID].value) {
-    consumptionSummary.entries[consumptionCategorySummaryID].value += consumptionCarbonEmissions;
+  if (consumptionSummary.entries[consumptionCategorySummaryID].absoluteValue) {
+    consumptionSummary.entries[consumptionCategorySummaryID].absoluteValue += consumptionCarbonEmissions;
   } else {
-    consumptionSummary.entries[consumptionCategorySummaryID].value = consumptionCarbonEmissions;
+    consumptionSummary.entries[consumptionCategorySummaryID].absoluteValue = consumptionCarbonEmissions;
     // TODO: Should there be a NaN value in a consumption Category Summary, all consumptions need to be summed individually.
   }
 
   // Sum all carbon emission values in consumption summary
   let totalCarbonEmissions = 0;
   consumptionSummary.entries.forEach((item) => {
-    totalCarbonEmissions += item.value;
+    totalCarbonEmissions += item.absoluteValue;
   });
+
+  // Calculate percentages for carbon emission categories
+  if (totalCarbonEmissions) {
+    consumptionSummary.entries.forEach((item) => {
+      item.value = item.absoluteValue/totalCarbonEmissions;
+    });
+  }
+  else {
+    return undefined;
+  }
+  
+
+  
 
   // Update total carbon emissions in consumption summary
   consumptionSummary.totalCarbonEmissions = totalCarbonEmissions;
@@ -381,14 +394,17 @@ function newConsumptionSummary(): ConsumptionSummary {
       {
         category: "electricity",
         value: 0,
+        absoluteValue: 0,
       },
       {
         category: "transportation",
         value: 0,
+        absoluteValue: 0,
       },
       {
         category: "heating",
         value: 0,
+        absoluteValue: 0,
       },
     ],
   };
