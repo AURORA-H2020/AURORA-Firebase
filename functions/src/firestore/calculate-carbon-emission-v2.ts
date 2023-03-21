@@ -8,6 +8,7 @@ import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
 import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import { CountryMetric } from "../models/country/metric/country-metric";
+import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary"
 // import { firestore } from "firebase-admin";
 
 // Initialize Firebase Admin SDK
@@ -60,11 +61,19 @@ export const calculateCarbonEmissionsBeta = functions
             }
           })
         })
+        // Write latest version to user after recalculating all consumptions
+        await admin
+        .firestore()
+        .collection(FirestoreCollections.users.name)
+        .doc(context.params.userId)
+        .update({
+          latestConsumptionVersion: latestConsumptionVersion,
+        });
     }
 
     // Check if document still exits. No calculation necessary if it has been deleted
+    const consumption = snapshot.after.data() as Consumption;
     if (snapshot.after.exists) {
-      const consumption = snapshot.after.data() as Consumption;
 
       // Calculate carbon emissions
       const calculatedConsumptions = await calculateConsumptions(consumption, user, latestConsumptionVersion, context);
@@ -83,6 +92,11 @@ export const calculateCarbonEmissionsBeta = functions
       }
     }
 
+    // NEW CONSUMPTION SUMMARY
+    calculateConsumptionSummary(user, consumption, context)
+
+
+    // OLD CONSUMPTION SUMMARY
     // Calculate consumption summary
     const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
     // Check if consumption summary is available
