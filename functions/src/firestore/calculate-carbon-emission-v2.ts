@@ -18,7 +18,7 @@ initializeAppIfNeeded();
  * A Cloud Function triggered by a document write in the consumptions sub-collection of a user.
  * This function will calculate the carbon emissions and write it to the corresponding property.
  */
-export const calculateCarbonEmissions = functions
+export const calculateCarbonEmissionsBeta = functions
   .region(PreferredCloudFunctionRegion)
   .firestore.document(
     [FirestoreCollections.users.name, "{userId}", FirestoreCollections.users.consumptions.name, "{consumptionId}"].join(
@@ -26,19 +26,22 @@ export const calculateCarbonEmissions = functions
     )
   )
   .onWrite(async (snapshot, context) => {
-    if (context.params.userId == "uw6h1wRVOvbEg4xKW2lx6nFqueA3") {
+    if (context.params.userId != "uw6h1wRVOvbEg4xKW2lx6nFqueA3") {
       return
     }
     // Calculate carbon emissions
-    const calculatedCarbonEmissions = await carbonEmissions(snapshot, context);
+    const calculatedConsumptions = await calculateConsumptions(snapshot, context);
     // Check if carbon emissions are available
-    if (calculatedCarbonEmissions) {
+    if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
       // Update consumption and set calculated carbon emissions
       await admin
         .firestore()
         .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
         .doc(context.params.consumptionId)
-        .update({ carbonEmissions: calculatedCarbonEmissions });
+        .update({
+          carbonEmissions: calculatedConsumptions.carbonEmission,
+          energyExpended: calculatedConsumptions.energyExpended
+        });
     }
     // Calculate consumption summary
     const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
@@ -58,10 +61,14 @@ export const calculateCarbonEmissions = functions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-async function carbonEmissions(
+async function calculateConsumptions(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
-): Promise<number | undefined> {
+): Promise<{carbonEmission: number, energyExpended: number} | undefined> {
+  // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all entries on next data entry.
+  const latestConsumptionVersion = "1.0.0"
+
+
   // Check if document has been deleted
   if (!snapshot.after.exists) {
     // Return undefined as document has been deleted
@@ -93,8 +100,8 @@ async function carbonEmissions(
     return undefined;
   }
 
-  // Check if carbon emissions are available on a consumption
-  if (consumption.carbonEmissions) {
+  // Check if consumptions are available on a consumption and version is latest
+  if (consumption.carbonEmissions && consumption.energyExpended && user.consumptionVersion == latestConsumptionVersion) {
     // Return undefined as calculating the carbon emissions is not needed
     return undefined;
   }
@@ -124,8 +131,14 @@ async function carbonEmissions(
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
-      // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
-      return (consumption.value / heatingData.householdSize) * heatingEF ?? undefined;
+      
+      const consumptionData = {
+        // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
+        carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
+        energyExpended: consumption.value ?? undefined
+      }
+      if (consumptionData.carbonEmission && consumptionData.energyExpended) return consumptionData;
+      else return undefined
     }
 
     /**
@@ -148,14 +161,19 @@ async function carbonEmissions(
       let metrics = await getMetrics(user.country, consumptionDate);
       let electricityEF = getElectricityEF(electricityData, metrics);
 
-      // Fallback in case electricityEF is NaN
+      // Fallback in case electricityEF is not a Number
       if (!electricityEF) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
       }
 
-      // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
-      return (consumption.value / electricityData.householdSize) * electricityEF ?? undefined;
+      const consumptionData = {
+        // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
+        carbonEmission: (consumption.value / electricityData.householdSize) * electricityEF ?? undefined,
+        energyExpended: consumption.value ?? undefined
+      }
+      if (consumptionData.carbonEmission && consumptionData.energyExpended) return consumptionData;
+      else return undefined
     }
 
     /**
@@ -175,23 +193,32 @@ async function carbonEmissions(
       }
 
       let metrics = await getMetrics(user.country, consumptionDate);
-      let transportationEF = getTransportationEF(transportationData, metrics);
+      let transportationFactors = getTransportationEF(transportationData, metrics);
 
       // Fallback in case transportationEF is not a Number
-      if (!transportationEF) {
+      if (!transportationFactors) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
-        transportationEF = getTransportationEF(transportationData, metrics);
+        transportationFactors = getTransportationEF(transportationData, metrics);
       }
 
-      if (transportationData.transportationType === "plane" && transportationEF) {
+      if (transportationData.transportationType === "plane" && transportationFactors?.carbonEF && transportationFactors.energyEF) {
         // Only if transportation type is "plane", return just the Emission Factor, as it is constant per capita
-        return transportationEF;
-      } else if (transportationEF === 0) {
-        return 0;
-      } else {
+        return {
+          carbonEmission: transportationFactors.carbonEF,
+          energyExpended: transportationFactors.energyEF
+        }
+      } else if (transportationFactors?.carbonEF === 0 && transportationFactors.energyEF) {
+        return {
+          carbonEmission: transportationFactors.carbonEF,
+          energyExpended: consumption.value * transportationFactors.energyEF
+        }
+      } else if (transportationFactors?.carbonEF && transportationFactors.energyEF) {
         // For all other transportation types: Transport Emission Factor is in kg CO2 per km, so it is just multiplied with the value given in kilometer.
-        return consumption.value * transportationEF ?? undefined;
-      }
+        return {
+          carbonEmission: consumption.value * transportationFactors.carbonEF,
+          energyExpended: consumption.value * transportationFactors.energyEF
+        }
+      } else return undefined;
     }
   }
 }
@@ -245,7 +272,7 @@ function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firest
  * @param metrics Document Data containing all EF values (metrics).
  */
 function getElectricityEF(electricityData: Consumption["electricity"], metrics: admin.firestore.DocumentData) {
-  if (!metrics.electricity) {
+  if (!metrics.electricity.default) {
     return undefined;
   }
   return metrics.electricity.default;
@@ -267,10 +294,13 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
   if (
     publicVehicleOccupancy &&
     transportationType &&
-    metrics.transportation &&
-    transportationType in metrics.transportation
+    transportationType in metrics.transportation &&
+    transportationType in metrics.transportationEnergy
   ) {
-    return metrics.transportation[transportationType][publicVehicleOccupancy];
+    return {
+      carbonEF: metrics.transportation[transportationType][publicVehicleOccupancy],
+      energyEF: metrics.transportationEnergy[transportationType][publicVehicleOccupancy],
+    };
   } else {
     let privateVehicleOccupancy = transportationData.privateVehicleOccupancy;
     if (!privateVehicleOccupancy) {
@@ -282,8 +312,11 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
         privateVehicleOccupancy = 5;
       }
     }
-    if (metrics.transportation && transportationType in metrics.transportation) {
-      return metrics.transportation[transportationType][String(privateVehicleOccupancy)];
+    if (transportationType in metrics.transportation && transportationType in metrics.transportationEnergy) {
+      return {
+        carbonEF: metrics.transportation[transportationType][String(privateVehicleOccupancy)],
+        energyEF: metrics.transportationEnergy[transportationType][String(privateVehicleOccupancy)],
+      };
     } else {
       return undefined;
     }
@@ -291,7 +324,7 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
 }
 
 /**
- * [getMetric]
+ * [getMetrics]
  * Function to get relevant metrics based on:
  * @param countryID ID of the associated country.
  * @param consumptionDate Timestamp of the consumption occurance to get the most viable metric version.
@@ -310,8 +343,8 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp | undefi
       if (!querySnapshot.empty) {
         return querySnapshot.docs[0].data();
       } else {
-        return null;
-      } // TODO: add standard EU metrics as fallback?
+        return undefined;
+      }
     })) as CountryMetric;
   if (!metrics) {
     throw new Error("Country not found");
