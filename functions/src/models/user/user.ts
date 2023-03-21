@@ -7,6 +7,7 @@ export interface User {
   yearOfBirth?: number;
   gender?: UserGender;
   consumptionVersion?: string;
+  consumptionSummaryVersion?: string;
   country: string;
   city?: string;
   consumptionSummary?: ConsumptionSummary;
