@@ -251,12 +251,12 @@ function calculateConsumptionLabel(labelStructure: LabelStructure, consumptionSu
     const overallEnergyExpendedLabels: LabelValues[] = [];
 
     consumptionSummaryEntry.categories.forEach((categorySummary) => {
-      const carbonEmissionCategoryLabels = structuredClone(
+      const carbonEmissionCategoryLabels: LabelValues[] = JSON.parse(JSON.stringify(
         labelStructure.carbonEmission[categorySummary.category as keyof typeof labelStructure.carbonEmission]
-      );
-      const energyUsedCategoryLabels = structuredClone(
+      ));
+      const energyUsedCategoryLabels: LabelValues[] = JSON.parse(JSON.stringify(
         labelStructure.energyExpended[categorySummary.category as keyof typeof labelStructure.energyExpended]
-      );
+      ));
 
       // get factor of consumptions entered based on number of days of data entry
       let consumptionDaysCount = 0;
@@ -498,70 +498,3 @@ export async function calculateConsumptionSummary(user:User, consumption:Consump
         )
     })
 }
-
-
-
-
-/*
-if (testConsumption.electricity) {
-console.log (
-    calculateMonthPercentages(testConsumption.electricity?.startDate, testConsumption.electricity?.endDate)
-)
-}
-*/
-
-// const consumptions = [testConsumptionElectricity,testConsumptionHeating,testConsumptionTransportation]
-
-/*
-function mainFirebaseFunction(): ConsumptionSummaryCollection {
-  const latestVersion = "1.0.0";
-  let state: string | undefined = undefined;
-
-  // Firebase function to try and fetch consumption summary
-  const consumptionSummaryCollection: ConsumptionSummaryCollection = { entries: [] };
-
-  if (consumptionSummaryCollection.entries && consumptionSummaryCollection.entries.length > 0) {
-    consumptionSummaryCollection.entries.forEach((consumptionSummary) => {
-      if (consumptionSummary.version != latestVersion) state = "regenerateAll";
-    });
-    if (state === undefined) {
-      state = "updateEntry";
-    }
-  } else state = "regenerateAll";
-
-  switch (state) {
-    case "updateEntry": {
-      // updateConsumptionSummaryEntries(testConsumptionTransportation, latestVersion, consumptionSummaryCollection.entries)
-      break;
-    }
-    default: {
-      // consumptions.forEach(consumption => updateConsumptionSummaryEntries(consumption, latestVersion, consumptionSummaryCollection.entries, isDelete))
-    }
-  }
-
-  return consumptionSummaryCollection;
-}
-
-*/
-
-// console.log(JSON.stringify(mainFirebaseFunction(), null, 2));
-
-/*
-
-
-//console.log("!!! TRANSPORTATION TEST !!!")
-let test1 = updateConsumptionSummaryEntries(testConsumptionTransportation);
-
-console.log("!!! HEATING TEST !!!");
-let test2 = updateConsumptionSummaryEntries(testConsumptionElectricity);
-
-console.log("!!! ELECTRICITY TEST !!!");
-let test3 = updateConsumptionSummaryEntries(testConsumptionHeating, test2);
-
-console.log(JSON.stringify(test3, null, 2));
-
-// console.log(JSON.stringify(test2,null,2))
-
-//console.log (JSON.stringify(consumptionSummary(testConsumption),null,2))
-
-*/
