@@ -14,4 +14,5 @@ export interface Consumption {
   value: number;
   description?: string;
   carbonEmissions?: number;
+  energyExpended?: number;
 }
