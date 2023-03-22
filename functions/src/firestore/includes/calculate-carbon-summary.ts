@@ -5,17 +5,9 @@ import { Consumption } from "../../models/consumption/consumption";
 import { ConsumptionSummaryEntry } from "../../models/consumption-summary-v2/consumption-summary";
 import { ConsumptionCategory } from "../../models/consumption/consumption-category";
 import { FirestoreCollections } from "../../utils/firestore-collections";
-
 import { LabelStructure } from "../../models/country/labels/country-label-structure";
 import { LabelValues } from "../../models/country/labels/country-label-values";
 import { User } from "../../models/user/user";
-// import { User } from "../../models/user/user";
-
-/*
-interface ConsumptionSummaryCollection {
-  entries: ConsumptionSummaryEntry[] | undefined;
-}
-*/
 
 function newConsumptionSummaryEntry(year: number, categories: string[]) {
   const consumptionSummaryEntry: ConsumptionSummaryEntry = {
@@ -160,7 +152,7 @@ function updateConsumptionSummaryEntries(
       const annualConsumption = ensure(consumptionSummaryEntries.find((e) => e.year === year));
 
       let thisCarbonEmissionAnnualTotal = 0;
-      let thisEnergyUsedAnnualTotal = 0;
+      let thisEnergyExpendedAnnualTotal = 0;
 
       annualConsumption.version = currentVersion;
       annualConsumption.dateLastUpdated = Timestamp.fromDate(new Date());
@@ -197,7 +189,7 @@ function updateConsumptionSummaryEntries(
             thisCarbonEmissionAnnualTotal += monthlyCarbonEmissionDistribution[year][month];
 
             annualConsumption.energyExpended.total += monthlyEnergyExpendedDistribution[year][month];
-            thisEnergyUsedAnnualTotal += monthlyEnergyExpendedDistribution[year][month];
+            thisEnergyExpendedAnnualTotal += monthlyEnergyExpendedDistribution[year][month];
           }
 
           // recalculate percentages or set to zero if totals are zero (result is NaN)
@@ -213,7 +205,7 @@ function updateConsumptionSummaryEntries(
       annualConsumption.categories.forEach((categorySummary) => {
         if (categorySummary.category === consumption.category) {
           categorySummary.carbonEmission.total += thisCarbonEmissionAnnualTotal;
-          categorySummary.energyExpended.total += thisEnergyUsedAnnualTotal;
+          categorySummary.energyExpended.total += thisEnergyExpendedAnnualTotal;
           // create array with count of consumptions per day over a year
           categorySummary.consumptionDays = consumptionDaysArray(
             startDate,
@@ -266,18 +258,18 @@ function calculateConsumptionLabel(
           labelStructure.carbonEmission[categorySummary.category as keyof typeof labelStructure.carbonEmission]
         )
       );
-      const energyUsedCategoryLabels: LabelValues[] = JSON.parse(
+      const energyExpendedCategoryLabels: LabelValues[] = JSON.parse(
         JSON.stringify(
           labelStructure.energyExpended[categorySummary.category as keyof typeof labelStructure.energyExpended]
         )
       );
 
-      if (!carbonEmissionCategoryLabels || !energyUsedCategoryLabels) {
+      if (!carbonEmissionCategoryLabels || !energyExpendedCategoryLabels) {
         throw new Error(
           "Category Labels undefined. \n carbonEmissionCategoryLabels: " +
             JSON.stringify(carbonEmissionCategoryLabels) +
-            "\n energyUsedCategoryLabels: " +
-            JSON.stringify(energyUsedCategoryLabels)
+            "\n energyExpendedCategoryLabels: " +
+            JSON.stringify(energyExpendedCategoryLabels)
         );
       }
 
@@ -286,7 +278,18 @@ function calculateConsumptionLabel(
       for (const day in categorySummary.consumptionDays) {
         if (categorySummary.consumptionDays[day] > 0) consumptionDaysCount += 1;
       }
-      let consumptionLabelFactor = consumptionDaysCount / Object.keys(categorySummary.consumptionDays).length;
+
+      let consumptionLabelFactor: number;
+      // Set consumptionLabelFactor to 1 for transportation, as it cannot be prorated across the year like the other categories. 100% of label boundaries are therefore applied at all times.
+      if (categorySummary.category == "transportation") {
+        consumptionLabelFactor = 1;
+      } else {
+        consumptionLabelFactor = consumptionDaysCount / Object.keys(categorySummary.consumptionDays).length;
+      }
+      const consumptionEntriesCount = Object.values(categorySummary.consumptionDays).reduce(
+        (partialSum, a) => partialSum + a,
+        0
+      );
       if (!consumptionLabelFactor) consumptionLabelFactor = 0;
 
       // adjust labelValues based on first consumption date and current day
@@ -295,18 +298,19 @@ function calculateConsumptionLabel(
         singleCarbonEmissionLabel.minimum *= consumptionLabelFactor;
       });
 
-      energyUsedCategoryLabels.map((singleEnergyUsedLabel) => {
-        singleEnergyUsedLabel.maximum *= consumptionLabelFactor;
-        singleEnergyUsedLabel.minimum *= consumptionLabelFactor;
+      energyExpendedCategoryLabels.map((singleEnergyExpendedLabel) => {
+        singleEnergyExpendedLabel.maximum *= consumptionLabelFactor;
+        singleEnergyExpendedLabel.minimum *= consumptionLabelFactor;
       });
 
       carbonEmissionCategoryLabels.forEach((carbonEmissionLabel) => {
         if (
           carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
-          carbonEmissionLabel.minimum < categorySummary.carbonEmission.total
+          carbonEmissionLabel.minimum < categorySummary.carbonEmission.total &&
+          consumptionEntriesCount > 0
         ) {
           categorySummary.carbonEmission.label = carbonEmissionLabel.label;
-        }
+        } else categorySummary.carbonEmission.label = null;
 
         // construct overall label if current label is not "overall"
         const i = overallCarbonEmissionLabels.findIndex((OCELabel) => OCELabel.label === carbonEmissionLabel.label);
@@ -318,23 +322,24 @@ function calculateConsumptionLabel(
         }
       });
 
-      energyUsedCategoryLabels.forEach((energyUsedLabel) => {
+      energyExpendedCategoryLabels.forEach((energyExpendedLabel) => {
         if (
-          energyUsedLabel.maximum > categorySummary.energyExpended.total &&
-          energyUsedLabel.minimum < categorySummary.energyExpended.total
+          energyExpendedLabel.maximum > categorySummary.energyExpended.total &&
+          energyExpendedLabel.minimum < categorySummary.energyExpended.total &&
+          consumptionEntriesCount > 0
         ) {
-          categorySummary.energyExpended.label = energyUsedLabel.label;
-        }
+          categorySummary.energyExpended.label = energyExpendedLabel.label;
+        } else categorySummary.energyExpended.label = null;
 
         // construct overall label if current label is not "overall"
         const i = overallEnergyExpendedLabels.findIndex(
-          (overallEnergyExpendedLabel) => overallEnergyExpendedLabel.label === energyUsedLabel.label
+          (overallEnergyExpendedLabel) => overallEnergyExpendedLabel.label === energyExpendedLabel.label
         );
         if (i > -1) {
-          overallEnergyExpendedLabels[i].maximum += energyUsedLabel.maximum;
-          overallEnergyExpendedLabels[i].minimum += energyUsedLabel.minimum;
+          overallEnergyExpendedLabels[i].maximum += energyExpendedLabel.maximum;
+          overallEnergyExpendedLabels[i].minimum += energyExpendedLabel.minimum;
         } else {
-          overallEnergyExpendedLabels.push({ ...energyUsedLabel });
+          overallEnergyExpendedLabels.push({ ...energyExpendedLabel });
         }
       });
     });
@@ -443,7 +448,6 @@ function consumptionDaysArray(
       }
     }
   }
-
   return arr;
 }
 
@@ -516,7 +520,6 @@ export async function calculateConsumptionSummary(
   }
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
-    console.log(JSON.stringify(consumptionSummary));
     await admin
       .firestore()
       .collection(FirestoreCollections.users.name)
