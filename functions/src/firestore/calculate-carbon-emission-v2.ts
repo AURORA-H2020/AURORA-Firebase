@@ -37,7 +37,13 @@ export const calculateCarbonEmissionsBeta = functions
     console.log(JSON.stringify(snapshot.after.data()))
     console.log("--- Snapshot BEFORE ---")
     console.log(JSON.stringify(snapshot.before.data()))
-    if (snapshot.after.exists) {
+
+    if (snapshot.after.exists) console.log("Exists returns TRUE")
+    if (snapshot.after.data()) console.log("Data returns TRUE")
+
+
+    if (snapshot.after.data()) {
+      console.log("Snapshot exists")
       // check if the user entered value hasn't changed
       if (snapshot.after.data()?.value == snapshot.before.data()?.value) {
         // check whether the energy and carbon calculated properties exist
@@ -46,6 +52,7 @@ export const calculateCarbonEmissionsBeta = functions
         }
       }
     }
+    console.log("Snapshot doesnt exist")
 
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
@@ -54,12 +61,14 @@ export const calculateCarbonEmissionsBeta = functions
     if (!user) {
       throw new Error("User not found");
     }
+    console.log("User: " + user)
 
     // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all consumptions on next data entry.
     const latestConsumptionVersion = "1.0.0";
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
     if (user.consumptionVersion != latestConsumptionVersion || !user.consumptionVersion) {
+      console.log("Consumption Version mismatch")
       await admin
         .firestore()
         .collection(FirestoreCollections.users.name)
