@@ -413,10 +413,10 @@ function consumptionDaysArray(
   arr?: { [day: number]: number },
   isDelete = false
 ): { [day: number]: number } {
-  const startDate = new Date(startDateTimestamp.seconds * 1000)
-  const endDate = new Date(endDateTimestamp.seconds * 1000)
-  startDate.setHours(0,0,0,0)
-  endDate.setHours(0,0,0,0)
+  let startDate = new Date(startDateTimestamp.seconds * 1000);
+  let endDate = new Date(endDateTimestamp.seconds * 1000);
+  startDate = new Date(startDate.setHours(0, 0, 0, 0));
+  endDate = new Date(endDate.setHours(0, 0, 0, 0));
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
 
@@ -463,18 +463,20 @@ export async function calculateConsumptionSummary(
 
   let consumptionSummaryArray: ConsumptionSummaryEntry[] | undefined = [];
 
-  // get existing consumption summary, if any.
-  await admin
-    .firestore()
-    .collection(FirestoreCollections.users.name)
-    .doc(context.params.userId)
-    .collection(FirestoreCollections.users.consumptionSummaries.name)
-    .get()
-    .then((snapshot) => {
-      snapshot.forEach((consumptionSummaryEntry) => {
-        consumptionSummaryArray?.push(consumptionSummaryEntry.data() as ConsumptionSummaryEntry);
+  // get existing consumption summary, if any, but only if a single consumption is provided. Otherwise recalculate the summary from scratch.
+  if (consumption) {
+    await admin
+      .firestore()
+      .collection(FirestoreCollections.users.name)
+      .doc(context.params.userId)
+      .collection(FirestoreCollections.users.consumptionSummaries.name)
+      .get()
+      .then((snapshot) => {
+        snapshot.forEach((consumptionSummaryEntry) => {
+          consumptionSummaryArray?.push(consumptionSummaryEntry.data() as ConsumptionSummaryEntry);
+        });
       });
-    });
+  }
 
   if (
     latestConsumptionSummaryVersion == user.consumptionSummaryVersion &&
@@ -514,6 +516,7 @@ export async function calculateConsumptionSummary(
   }
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
+    console.log(JSON.stringify(consumptionSummary));
     await admin
       .firestore()
       .collection(FirestoreCollections.users.name)
