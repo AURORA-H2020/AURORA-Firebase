@@ -2,15 +2,14 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { Consumption } from "../../models/consumption/consumption";
-import { ConsumptionSummaryEntry } from "../../models/consumption-summary-v2/consumption-summary"
-import { ConsumptionCategory } from "../../models/consumption/consumption-category"
+import { ConsumptionSummaryEntry } from "../../models/consumption-summary-v2/consumption-summary";
+import { ConsumptionCategory } from "../../models/consumption/consumption-category";
 import { FirestoreCollections } from "../../utils/firestore-collections";
 
-import { LabelStructure } from "../../models/country/labels/country-label-structure"
-import { LabelValues } from "../../models/country/labels/country-label-values"
+import { LabelStructure } from "../../models/country/labels/country-label-structure";
+import { LabelValues } from "../../models/country/labels/country-label-values";
 import { User } from "../../models/user/user";
 // import { User } from "../../models/user/user";
-
 
 /*
 interface ConsumptionSummaryCollection {
@@ -138,7 +137,7 @@ function updateConsumptionSummaryEntries(
     }
 
     // iterate over years in consumption and ensure a consumption summary exists.
-    Object.entries(monthlyCarbonEmissionDistribution).forEach(yearEntry => {
+    Object.entries(monthlyCarbonEmissionDistribution).forEach((yearEntry) => {
       const year = Number(yearEntry[0]);
 
       // create consumption summary if it does not exist
@@ -147,30 +146,31 @@ function updateConsumptionSummaryEntries(
       }
 
       // create year if it does not exist
-      if (
-        !consumptionSummaryEntries.some((e) => (e.year == year))
-      ) {
-        consumptionSummaryEntries.push(
-          newConsumptionSummaryEntry(year, categories)
-        );
+      if (!consumptionSummaryEntries.some((e) => e.year == year)) {
+        consumptionSummaryEntries.push(newConsumptionSummaryEntry(year, categories));
       }
 
       const annualConsumption = ensure(consumptionSummaryEntries.find((e) => e.year === year));
+      console.log("--- annualConsumption ---");
+      console.log(JSON.stringify(annualConsumption));
+      
       let thisCarbonEmissionAnnualTotal = 0;
       let thisEnergyUsedAnnualTotal = 0;
 
       annualConsumption.version = currentVersion;
       annualConsumption.dateLastUpdated = Timestamp.fromDate(new Date());
 
-      Object.entries(monthlyCarbonEmissionDistribution[year]).forEach(monthEntry => {
+      Object.entries(monthlyCarbonEmissionDistribution[year]).forEach((monthEntry) => {
         const month = Number(monthEntry[0]);
 
         // create month if it does not exist
-        if (!annualConsumption.months.some((e) => (e.number == month))) {
+        if (!annualConsumption.months.some((e) => e.number == month)) {
           annualConsumption.months.push(newMonthlyConsumptionSummary(month));
         }
 
         const monthlyConsumption = ensure(annualConsumption.months.find((e) => e.number === month));
+        console.log("--- monthlyConsumption ---");
+        console.log(JSON.stringify(monthlyConsumption));
 
         // increase monthly consumption total
         monthlyConsumption.carbonEmission.total += monthlyCarbonEmissionDistribution[year][month];
@@ -178,11 +178,13 @@ function updateConsumptionSummaryEntries(
 
         // loop over categories and update them accordingly. This is required for updating percentages in all categories
         categories.forEach((category) => {
-          if (!monthlyConsumption.categories.some((e) => (e.category == category))) {
+          if (!monthlyConsumption.categories.some((e) => e.category == category)) {
             monthlyConsumption.categories.push(newMonthlyConsumptionCategory(category));
           }
 
           const monthlyCategoryConsumption = ensure(monthlyConsumption.categories.find((e) => e.category === category));
+          console.log("--- monthlyCategoryConsumption ---");
+          console.log(JSON.stringify(monthlyCategoryConsumption));
 
           // only add consumption value if category matches
           if (category === consumption.category) {
@@ -205,7 +207,7 @@ function updateConsumptionSummaryEntries(
               monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total;
           }
         });
-      })
+      });
 
       // iterate over consumption summary categories to update value of given consumption category and percentages for all
       annualConsumption.categories.forEach((categorySummary) => {
@@ -226,7 +228,7 @@ function updateConsumptionSummaryEntries(
         categorySummary.energyExpended.percentage =
           categorySummary.energyExpended.total / annualConsumption.energyExpended.total;
       });
-    })
+    });
 
     calculateConsumptionLabel(labelStructure, consumptionSummaryEntries);
 
@@ -242,21 +244,27 @@ function ensure<T>(argument: T | undefined | null, message = "This value was pro
   return argument;
 }
 
-function calculateConsumptionLabel(labelStructure: LabelStructure, consumptionSummaryEntries?: ConsumptionSummaryEntry[]) {
+function calculateConsumptionLabel(
+  labelStructure: LabelStructure,
+  consumptionSummaryEntries?: ConsumptionSummaryEntry[]
+) {
   if (!consumptionSummaryEntries) return undefined;
-
 
   consumptionSummaryEntries.forEach((consumptionSummaryEntry) => {
     const overallCarbonEmissionLabels: LabelValues[] = [];
     const overallEnergyExpendedLabels: LabelValues[] = [];
 
     consumptionSummaryEntry.categories.forEach((categorySummary) => {
-      const carbonEmissionCategoryLabels: LabelValues[] = JSON.parse(JSON.stringify(
-        labelStructure.carbonEmission[categorySummary.category as keyof typeof labelStructure.carbonEmission]
-      ));
-      const energyUsedCategoryLabels: LabelValues[] = JSON.parse(JSON.stringify(
-        labelStructure.energyExpended[categorySummary.category as keyof typeof labelStructure.energyExpended]
-      ));
+      const carbonEmissionCategoryLabels: LabelValues[] = JSON.parse(
+        JSON.stringify(
+          labelStructure.carbonEmission[categorySummary.category as keyof typeof labelStructure.carbonEmission]
+        )
+      );
+      const energyUsedCategoryLabels: LabelValues[] = JSON.parse(
+        JSON.stringify(
+          labelStructure.energyExpended[categorySummary.category as keyof typeof labelStructure.energyExpended]
+        )
+      );
 
       // get factor of consumptions entered based on number of days of data entry
       let consumptionDaysCount = 0;
@@ -374,36 +382,15 @@ function calculateMonthlyConsumptionDistribution(
       totalDays += daysInTimeframe;
     }
   }
- 
 
-  Object.entries(monthlyConsumptionDistribution).forEach(year => {
-    Object.entries(year[1]).forEach(month => {
-      monthlyConsumptionDistribution[Number(year[0])][Number(month[0])] = (month[1]/totalDays) * consumptionValue
-    })
-  })
+  Object.entries(monthlyConsumptionDistribution).forEach((year) => {
+    Object.entries(year[1]).forEach((month) => {
+      monthlyConsumptionDistribution[Number(year[0])][Number(month[0])] = (month[1] / totalDays) * consumptionValue;
+    });
+  });
 
   return monthlyConsumptionDistribution;
 }
-
-/*
-function getNumberOfMonths(startDate: Date, endDate: Date): number {
-  const startYear = startDate.getFullYear();
-  const startMonth = startDate.getMonth();
-  const endYear = endDate.getFullYear();
-  const endMonth = endDate.getMonth();
-  const startDay = startDate.getDate();
-  const endDay = endDate.getDate();
-
-  let totalMonths = (endYear - startYear) * 12;
-  totalMonths += endMonth - startMonth;
-
-  if (startDay <= endDay) {
-    totalMonths++;
-  }
-
-  return totalMonths;
-}
-*/
 
 function consumptionDaysArray(
   startDateTimestamp: Timestamp,
@@ -444,57 +431,78 @@ function consumptionDaysArray(
   return arr;
 }
 
+export async function calculateConsumptionSummary(
+  user: User,
+  consumption: Consumption,
+  context: functions.EventContext<Record<string, string>>
+) {
+  // Version of this implementation of the calculateConsumptionSummary function. Increase to trigger recalculating all entries on next data entry.
+  const latestConsumptionSummaryVersion = "1.0.0";
 
+  const countryLabels = (
+    await admin.firestore().collection(FirestoreCollections.countries.name).doc(user.country).get()
+  ).data()?.labels;
+  if (!countryLabels) return;
 
-export async function calculateConsumptionSummary(user:User, consumption:Consumption, context:functions.EventContext<Record<string, string>>) {
+  let consumptionSummaryArray: ConsumptionSummaryEntry[] | undefined = [];
 
-    // Version of this implementation of the calculateConsumptionSummary function. Increase to trigger recalculating all entries on next data entry.
-    const latestConsumptionSummaryVersion = "1.0.0";
+  console.log("--- countryLabels ---")
+  console.log(JSON.stringify(countryLabels))
+  console.log("--- consumption ---")
+  console.log(JSON.stringify(consumption))
 
-    const countryLabels = (await admin.firestore().collection(FirestoreCollections.countries.name).doc(user.country).get()).data()?.labels
-    if (!countryLabels) return
+  // get existing consumption summary, if any.
+  await admin
+    .firestore()
+    .collection(FirestoreCollections.users.name)
+    .doc(context.params.userId)
+    .collection(FirestoreCollections.users.consumptionSummaries.name)
+    .get()
+    .then((snapshot) => {
+      snapshot.forEach((consumptionSummaryEntry) => {
+        consumptionSummaryArray?.push(consumptionSummaryEntry.data() as ConsumptionSummaryEntry);
+      });
+    });
 
-    let consumptionSummaryArray: ConsumptionSummaryEntry[] | undefined = []
-
-    // get existing consumption summary, if any.
-    await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).collection(FirestoreCollections.users.consumptionSummaries.name).get().then(snapshot => {
-        snapshot.forEach(consumptionSummaryEntry => {
-            consumptionSummaryArray?.push(consumptionSummaryEntry.data() as ConsumptionSummaryEntry)
-        })
-    })
-
-    if (latestConsumptionSummaryVersion == user.consumptionSummaryVersion && consumptionSummaryArray.length > 0) {
-        consumptionSummaryArray = updateConsumptionSummaryEntries(consumption as Consumption, countryLabels, latestConsumptionSummaryVersion, consumptionSummaryArray)
+  if (latestConsumptionSummaryVersion == user.consumptionSummaryVersion && consumptionSummaryArray.length > 0) {
+    consumptionSummaryArray = updateConsumptionSummaryEntries(
+      consumption as Consumption,
+      countryLabels,
+      latestConsumptionSummaryVersion,
+      consumptionSummaryArray
+    );
+  } else {
+    await admin
+      .firestore()
+      .collection(FirestoreCollections.users.name)
+      .doc(context.params.userId)
+      .collection(FirestoreCollections.users.consumptions.name)
+      .get()
+      .then((snapshot) => {
+        snapshot.forEach((consumption) => {
+          consumptionSummaryArray = updateConsumptionSummaryEntries(
+            consumption.data() as Consumption,
+            countryLabels,
+            latestConsumptionSummaryVersion,
+            consumptionSummaryArray
+          );
+        });
+      });
+    if (consumptionSummaryArray) {
+      // Write latest version to user after recalculating all consumptions
+      await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
+        latestConsumptionVersion: latestConsumptionSummaryVersion,
+      });
     }
-    else {
-        await admin
-        .firestore()
-        .collection(FirestoreCollections.users.name)
-        .doc(context.params.userId)
-        .collection(FirestoreCollections.users.consumptions.name)
-        .get().then(snapshot => {
-            snapshot.forEach(consumption => {
-                consumptionSummaryArray = updateConsumptionSummaryEntries(consumption.data() as Consumption, countryLabels, latestConsumptionSummaryVersion, consumptionSummaryArray)
-            })
-        })
-        if (consumptionSummaryArray) {
-            // Write latest version to user after recalculating all consumptions
-            await admin
-            .firestore()
-            .collection(FirestoreCollections.users.name)
-            .doc(context.params.userId)
-            .update({
-            latestConsumptionVersion: latestConsumptionSummaryVersion,
-            });
-        }
-    }
+  }
 
-    consumptionSummaryArray?.forEach(async consumptionSummary => {
-        await admin
-        .firestore()
-        .collection(FirestoreCollections.users.name)
-        .doc(context.params.userId).collection(FirestoreCollections.users.consumptionSummaries.name).doc(String(consumptionSummary.year)).set(
-            consumptionSummary
-        )
-    })
+  consumptionSummaryArray?.forEach(async (consumptionSummary) => {
+    await admin
+      .firestore()
+      .collection(FirestoreCollections.users.name)
+      .doc(context.params.userId)
+      .collection(FirestoreCollections.users.consumptionSummaries.name)
+      .doc(String(consumptionSummary.year))
+      .set(consumptionSummary);
+  });
 }
