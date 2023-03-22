@@ -461,7 +461,7 @@ export async function calculateConsumptionSummary(
 
   console.log("--- countryLabels ---");
   console.log(JSON.stringify(countryLabels));
-  console.log("--- consumption ---");
+  console.log("--- incoming consumption ---");
   console.log(JSON.stringify(consumption));
 
   // get existing consumption summary, if any.
@@ -476,6 +476,9 @@ export async function calculateConsumptionSummary(
         consumptionSummaryArray?.push(consumptionSummaryEntry.data() as ConsumptionSummaryEntry);
       });
     });
+
+  console.log("--- consumptionSummaryArray (1) ---")
+  console.log(JSON.stringify(consumptionSummaryArray))
 
   if (latestConsumptionSummaryVersion == user.consumptionSummaryVersion && consumptionSummaryArray.length > 0) {
     consumptionSummaryArray = updateConsumptionSummaryEntries(
@@ -493,12 +496,17 @@ export async function calculateConsumptionSummary(
       .get()
       .then((snapshot) => {
         snapshot.forEach((consumption) => {
+          console.log("--- consumption in forEach loop ---")
+          console.log(JSON.stringify(consumption))
           consumptionSummaryArray = updateConsumptionSummaryEntries(
             consumption.data() as Consumption,
             countryLabels,
             latestConsumptionSummaryVersion,
             consumptionSummaryArray
           );
+          console.log("--- consumptionSummaryArray (2) ---")
+          console.log(JSON.stringify(consumptionSummaryArray))
+          console.log("--- END FOREACH LOOP ---")
         });
       });
     if (consumptionSummaryArray) {
@@ -508,6 +516,9 @@ export async function calculateConsumptionSummary(
       });
     }
   }
+
+  console.log("--- consumptionSummaryArray (3) ---")
+  console.log(JSON.stringify(consumptionSummaryArray))
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
     await admin
