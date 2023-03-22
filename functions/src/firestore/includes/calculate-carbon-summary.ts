@@ -158,8 +158,6 @@ function updateConsumptionSummaryEntries(
       }
 
       const annualConsumption = ensure(consumptionSummaryEntries.find((e) => e.year === year));
-      console.log("--- annualConsumption ---");
-      console.log(JSON.stringify(annualConsumption));
 
       let thisCarbonEmissionAnnualTotal = 0;
       let thisEnergyUsedAnnualTotal = 0;
@@ -176,8 +174,6 @@ function updateConsumptionSummaryEntries(
         }
 
         const monthlyConsumption = ensure(annualConsumption.months.find((e) => e.number === month));
-        console.log("--- monthlyConsumption (1) ---");
-        console.log(JSON.stringify(monthlyConsumption));
 
         // increase monthly consumption total
         monthlyConsumption.carbonEmission.total += monthlyCarbonEmissionDistribution[year][month];
@@ -211,14 +207,10 @@ function updateConsumptionSummaryEntries(
           monthlyCategoryConsumption.energyExpended.percentage =
             monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total ?? 0;
         });
-        console.log("--- monthlyConsumption (2) ---");
-        console.log(JSON.stringify(monthlyConsumption));
       });
 
       // iterate over consumption summary categories to update value of given consumption category and percentages for all
       annualConsumption.categories.forEach((categorySummary) => {
-        console.log("--- categorySummary ---");
-        console.log(JSON.stringify(categorySummary));
         if (categorySummary.category === consumption.category) {
           categorySummary.carbonEmission.total += thisCarbonEmissionAnnualTotal;
           categorySummary.energyExpended.total += thisEnergyUsedAnnualTotal;
@@ -280,6 +272,15 @@ function calculateConsumptionLabel(
         )
       );
 
+      if (!carbonEmissionCategoryLabels || !energyUsedCategoryLabels) {
+        throw new Error(
+          "Category Labels undefined. \n carbonEmissionCategoryLabels: " +
+            JSON.stringify(carbonEmissionCategoryLabels) +
+            "\n energyUsedCategoryLabels: " +
+            JSON.stringify(energyUsedCategoryLabels)
+        );
+      }
+
       // get factor of consumptions entered based on number of days of data entry
       let consumptionDaysCount = 0;
       for (const day in categorySummary.consumptionDays) {
@@ -299,7 +300,6 @@ function calculateConsumptionLabel(
         singleEnergyUsedLabel.minimum *= consumptionLabelFactor;
       });
 
-      // console.log(JSON.stringify(labelValues,null,2))
       carbonEmissionCategoryLabels.forEach((carbonEmissionLabel) => {
         if (
           carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
@@ -442,8 +442,6 @@ function consumptionDaysArray(
     }
   }
 
-  console.log("--- consumptionDaysArray ---")
-  console.log(JSON.stringify(arr))
   return arr;
 }
 
@@ -462,11 +460,6 @@ export async function calculateConsumptionSummary(
 
   let consumptionSummaryArray: ConsumptionSummaryEntry[] | undefined = [];
 
-  console.log("--- countryLabels ---");
-  console.log(JSON.stringify(countryLabels));
-  console.log("--- incoming consumption ---");
-  console.log(JSON.stringify(consumption));
-
   // get existing consumption summary, if any.
   await admin
     .firestore()
@@ -479,9 +472,6 @@ export async function calculateConsumptionSummary(
         consumptionSummaryArray?.push(consumptionSummaryEntry.data() as ConsumptionSummaryEntry);
       });
     });
-
-  console.log("--- consumptionSummaryArray (1) ---");
-  console.log(JSON.stringify(consumptionSummaryArray));
 
   if (latestConsumptionSummaryVersion == user.consumptionSummaryVersion && consumptionSummaryArray.length > 0) {
     consumptionSummaryArray = updateConsumptionSummaryEntries(
@@ -499,29 +489,21 @@ export async function calculateConsumptionSummary(
       .get()
       .then((snapshot) => {
         snapshot.forEach((consumption) => {
-          console.log("--- consumption in forEach loop ---");
-          console.log(JSON.stringify(consumption));
           consumptionSummaryArray = updateConsumptionSummaryEntries(
             consumption.data() as Consumption,
             countryLabels,
             latestConsumptionSummaryVersion,
             consumptionSummaryArray
           );
-          console.log("--- consumptionSummaryArray (2) ---");
-          console.log(JSON.stringify(consumptionSummaryArray));
-          console.log("--- END FOREACH LOOP ---");
         });
       });
     if (consumptionSummaryArray) {
       // Write latest version to user after recalculating all consumptions
       await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
-        latestConsumptionVersion: latestConsumptionSummaryVersion,
+        consumptionSummaryVersion: latestConsumptionSummaryVersion,
       });
     }
   }
-
-  console.log("--- consumptionSummaryArray (3) ---");
-  console.log(JSON.stringify(consumptionSummaryArray));
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
     await admin
