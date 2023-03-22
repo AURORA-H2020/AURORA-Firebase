@@ -413,8 +413,10 @@ function consumptionDaysArray(
   arr?: { [day: number]: number },
   isDelete = false
 ): { [day: number]: number } {
-  const startDate = new Date(startDateTimestamp.seconds * 1000);
-  const endDate = new Date(endDateTimestamp.seconds * 1000);
+  const startDate = new Date(startDateTimestamp.seconds * 1000)
+  const endDate = new Date(endDateTimestamp.seconds * 1000)
+  startDate.setHours(0,0,0,0)
+  endDate.setHours(0,0,0,0)
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
 
@@ -499,8 +501,7 @@ export async function calculateConsumptionSummary(
             consumption.data() as Consumption,
             countryLabels,
             latestConsumptionSummaryVersion,
-            consumptionSummaryArray,
-            isDelete
+            consumptionSummaryArray
           );
         });
       });
