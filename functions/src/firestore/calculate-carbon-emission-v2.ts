@@ -33,17 +33,16 @@ export const calculateCarbonEmissionsBeta = functions
 
     // check if this is a reinvocation and exit function if it is
     // check that document has not been deleted.
-    console.log("--- Snapshot AFTER ---")
-    console.log(JSON.stringify(snapshot.after.data()))
-    console.log("--- Snapshot BEFORE ---")
-    console.log(JSON.stringify(snapshot.before.data()))
+    console.log("--- Snapshot AFTER ---");
+    console.log(JSON.stringify(snapshot.after.data()));
+    console.log("--- Snapshot BEFORE ---");
+    console.log(JSON.stringify(snapshot.before.data()));
 
-    if (snapshot.after.exists) console.log("Exists returns TRUE")
-    if (snapshot.after.data()) console.log("Data returns TRUE")
-
+    if (snapshot.after.exists) console.log("Exists returns TRUE");
+    if (snapshot.after.data()) console.log("Data returns TRUE");
 
     if (snapshot.after.data()) {
-      console.log("Snapshot exists")
+      console.log("Snapshot exists");
       // check if the user entered value hasn't changed
       if (snapshot.after.data()?.value == snapshot.before.data()?.value) {
         // check whether the energy and carbon calculated properties exist
@@ -52,7 +51,7 @@ export const calculateCarbonEmissionsBeta = functions
         }
       }
     }
-    console.log("Snapshot doesnt exist")
+    console.log("Snapshot doesnt exist");
 
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
@@ -61,14 +60,14 @@ export const calculateCarbonEmissionsBeta = functions
     if (!user) {
       throw new Error("User not found");
     }
-    console.log("User: " + user)
+    console.log("User: " + user);
 
     // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all consumptions on next data entry.
     const latestConsumptionVersion = "1.0.0";
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
     if (user.consumptionVersion != latestConsumptionVersion || !user.consumptionVersion) {
-      console.log("Consumption Version mismatch")
+      console.log("Consumption Version mismatch");
       await admin
         .firestore()
         .collection(FirestoreCollections.users.name)
@@ -94,7 +93,7 @@ export const calculateCarbonEmissionsBeta = functions
         });
       // Write latest version to user after recalculating all consumptions
       await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
-        latestConsumptionVersion: latestConsumptionVersion,
+        consumptionVersion: latestConsumptionVersion,
       });
       // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
       calculateConsumptionSummary(user, context);
@@ -136,7 +135,7 @@ export const calculateCarbonEmissionsBeta = functions
         calculateConsumptionSummary(user, context, consumption as Consumption);
       } else {
         // if there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
-        console.log("Delete Document: " + snapshot.before.data())
+        console.log("Delete Document: " + snapshot.before.data());
         calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
       }
     }
