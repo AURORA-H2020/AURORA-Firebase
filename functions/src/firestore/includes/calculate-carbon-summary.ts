@@ -286,10 +286,7 @@ function calculateConsumptionLabel(
       } else {
         consumptionLabelFactor = consumptionDaysCount / Object.keys(categorySummary.consumptionDays).length;
       }
-      const consumptionEntriesCount = Object.values(categorySummary.consumptionDays).reduce(
-        (partialSum, a) => partialSum + a,
-        0
-      );
+
       if (!consumptionLabelFactor) consumptionLabelFactor = 0;
 
       // adjust labelValues based on first consumption date and current day
@@ -303,18 +300,27 @@ function calculateConsumptionLabel(
         singleEnergyExpendedLabel.minimum *= consumptionLabelFactor;
       });
 
+      console.log("--- Label Category (CE): ",categorySummary.category,"---")
+      console.log(JSON.stringify(carbonEmissionCategoryLabels))
+      console.log("--- Label Category (EE): ",categorySummary.category,"---")
+      console.log(JSON.stringify(energyExpendedCategoryLabels))
+      console.log("--- Label Factor for: ",categorySummary.category,"---")
+      console.log(consumptionLabelFactor)
+
       carbonEmissionCategoryLabels.forEach((carbonEmissionLabel) => {
         if (
           carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
           carbonEmissionLabel.minimum < categorySummary.carbonEmission.total &&
-          consumptionEntriesCount > 0
+          consumptionDaysCount > 0
         ) {
           categorySummary.carbonEmission.label = carbonEmissionLabel.label;
         } else categorySummary.carbonEmission.label = null;
 
-        // construct overall label if current label is not "overall"
-        const i = overallCarbonEmissionLabels.findIndex((OCELabel) => OCELabel.label === carbonEmissionLabel.label);
-        if (i > -1) {
+        // construct overall Carbon Emission label
+        const i = overallCarbonEmissionLabels.findIndex(
+          (overallCarbonEmissionLabel) => overallCarbonEmissionLabel.label === carbonEmissionLabel.label
+        );
+        if (i >= 0) {
           overallCarbonEmissionLabels[i].maximum += carbonEmissionLabel.maximum;
           overallCarbonEmissionLabels[i].minimum += carbonEmissionLabel.minimum;
         } else {
@@ -326,16 +332,16 @@ function calculateConsumptionLabel(
         if (
           energyExpendedLabel.maximum > categorySummary.energyExpended.total &&
           energyExpendedLabel.minimum < categorySummary.energyExpended.total &&
-          consumptionEntriesCount > 0
+          consumptionDaysCount > 0
         ) {
           categorySummary.energyExpended.label = energyExpendedLabel.label;
         } else categorySummary.energyExpended.label = null;
 
-        // construct overall label if current label is not "overall"
+        // construct overall Energy Expended label
         const i = overallEnergyExpendedLabels.findIndex(
           (overallEnergyExpendedLabel) => overallEnergyExpendedLabel.label === energyExpendedLabel.label
         );
-        if (i > -1) {
+        if (i >= 0) {
           overallEnergyExpendedLabels[i].maximum += energyExpendedLabel.maximum;
           overallEnergyExpendedLabels[i].minimum += energyExpendedLabel.minimum;
         } else {
