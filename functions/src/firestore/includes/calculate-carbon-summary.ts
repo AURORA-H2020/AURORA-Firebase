@@ -90,7 +90,7 @@ function updateConsumptionSummaryEntries(
   labelStructure: LabelStructure,
   currentVersion: string,
   consumptionSummaryEntries?: ConsumptionSummaryEntry[],
-  deleteAction = false
+  isDelete = false
 ): ConsumptionSummaryEntry[] | undefined {
   const categories: ConsumptionCategory[] = ["heating", "electricity", "transportation"];
 
@@ -101,7 +101,7 @@ function updateConsumptionSummaryEntries(
   // Only proceed if both values are not undefined
   if (carbonEmissionValue && energyExpendedValue) {
     // reverse values if this is a delete action
-    if (deleteAction) {
+    if (isDelete) {
       carbonEmissionValue *= -1;
       energyExpendedValue *= -1;
     }
@@ -220,7 +220,7 @@ function updateConsumptionSummaryEntries(
             endDate,
             year,
             categorySummary.consumptionDays,
-            deleteAction
+            isDelete
           );
         }
         categorySummary.carbonEmission.percentage =
@@ -411,7 +411,7 @@ function consumptionDaysArray(
   endDateTimestamp: Timestamp,
   forYear: number,
   arr?: { [day: number]: number },
-  deleteAction = false
+  isDelete = false
 ): { [day: number]: number } {
   const startDate = new Date(startDateTimestamp.seconds * 1000);
   const endDate = new Date(endDateTimestamp.seconds * 1000);
@@ -419,7 +419,7 @@ function consumptionDaysArray(
   const endYear = endDate.getFullYear();
 
   let countValue = 1;
-  if (deleteAction) countValue *= -1;
+  if (isDelete) countValue *= -1;
 
   if (!arr) {
     arr = {};
@@ -483,7 +483,8 @@ export async function calculateConsumptionSummary(
       consumption as Consumption,
       countryLabels,
       latestConsumptionSummaryVersion,
-      consumptionSummaryArray
+      consumptionSummaryArray,
+      isDelete
     );
   } else {
     await admin
