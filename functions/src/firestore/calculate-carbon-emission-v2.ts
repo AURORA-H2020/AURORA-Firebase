@@ -31,8 +31,17 @@ export const calculateCarbonEmissionsBeta = functions
       return;
     }
 
-    // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all entries on next data entry.
-    const latestConsumptionVersion = "1.0.0";
+    // check if this is a reinvocation and exit function if it is
+    // check that document has not been deleted.
+    if (snapshot.after.exists) {
+      // check if the user entered value hasn't changed
+      if (snapshot.after.data()?.value == snapshot.before.data()?.value) {
+        // check whether the energy and carbon calculated properties exist
+        if (snapshot.after.data()?.energyExpended && snapshot.after.data()?.carbonEmissions) {
+          return; // exit function without doing anything
+        }
+      }
+    }
 
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
@@ -41,6 +50,9 @@ export const calculateCarbonEmissionsBeta = functions
     if (!user) {
       throw new Error("User not found");
     }
+
+    // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all consumptions on next data entry.
+    const latestConsumptionVersion = "1.0.0";
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
     if (user.consumptionVersion != latestConsumptionVersion || !user.consumptionVersion) {
@@ -71,38 +83,49 @@ export const calculateCarbonEmissionsBeta = functions
       await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
         latestConsumptionVersion: latestConsumptionVersion,
       });
-    }
-
-    // Check if document still exits. No calculation necessary if it has been deleted
-    if (snapshot.after.exists) {
-      // Calculate carbon emissions
-      const calculatedConsumptions = await calculateConsumptions(
-        snapshot.after.data() as Consumption,
-        user,
-        latestConsumptionVersion,
-        context
-      );
-      // Check if carbon emissions are available
-      if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
-        // Update consumption and set calculated carbon emissions
-        await admin
-          .firestore()
-          .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
-          .doc(context.params.consumptionId)
-          .update({
-            carbonEmissions: calculatedConsumptions.carbonEmission,
-            energyExpended: calculatedConsumptions.energyExpended,
-            version: latestConsumptionVersion,
-          });
-      }
-
-      calculateConsumptionSummary(user, snapshot.after.data() as Consumption, context);
+      // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
+      calculateConsumptionSummary(user, context);
     } else {
-      // if there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
-      calculateConsumptionSummary(user, snapshot.before.data() as Consumption, context, true);
-    }
+      // Check if document still exists. No calculation necessary if it has been deleted
+      if (snapshot.after.exists) {
+        // Calculate carbon emissions
+        const calculatedConsumptions = await calculateConsumptions(
+          snapshot.after.data() as Consumption,
+          user,
+          latestConsumptionVersion,
+          context
+        );
+        // Check if carbon emissions are available
+        if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
+          // Update consumption and set calculated carbon emissions
+          await admin
+            .firestore()
+            .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
+            .doc(context.params.consumptionId)
+            .update({
+              carbonEmissions: calculatedConsumptions.carbonEmission,
+              energyExpended: calculatedConsumptions.energyExpended,
+              version: latestConsumptionVersion,
+            });
+        }
 
-    // NEW CONSUMPTION SUMMARY
+        // get consumption again from firestore, as it has been updated with calculated consumptions
+        const consumption = (
+          await admin
+            .firestore()
+            .collection(FirestoreCollections.users.name)
+            .doc(context.params.userId)
+            .collection(FirestoreCollections.users.consumptions.name)
+            .doc(context.params.consumptionId)
+            .get()
+        ).data();
+
+        calculateConsumptionSummary(user, context, consumption as Consumption);
+      } else {
+        // if there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
+        calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+      }
+    }
 
     /*
     // OLD CONSUMPTION SUMMARY
@@ -142,6 +165,7 @@ async function calculateConsumptions(
     return undefined;
   }
 
+  /*
   // Check if consumptions are available on a consumption and version is latest
   if (
     consumption.carbonEmissions &&
@@ -151,6 +175,7 @@ async function calculateConsumptions(
     // Return undefined as calculating the carbon emissions is not needed
     return undefined;
   }
+  */
 
   switch (consumption.category) {
     /**

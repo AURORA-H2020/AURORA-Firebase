@@ -447,8 +447,8 @@ function consumptionDaysArray(
 
 export async function calculateConsumptionSummary(
   user: User,
-  consumption: Consumption,
   context: functions.EventContext<Record<string, string>>,
+  consumption?: Consumption,
   isDelete = false
 ) {
   // Version of this implementation of the calculateConsumptionSummary function. Increase to trigger recalculating all entries on next data entry.
@@ -474,7 +474,11 @@ export async function calculateConsumptionSummary(
       });
     });
 
-  if (latestConsumptionSummaryVersion == user.consumptionSummaryVersion && consumptionSummaryArray.length > 0) {
+  if (
+    latestConsumptionSummaryVersion == user.consumptionSummaryVersion &&
+    consumptionSummaryArray.length > 0 &&
+    consumption
+  ) {
     consumptionSummaryArray = updateConsumptionSummaryEntries(
       consumption as Consumption,
       countryLabels,
