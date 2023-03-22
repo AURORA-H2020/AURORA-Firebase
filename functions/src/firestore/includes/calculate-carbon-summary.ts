@@ -24,11 +24,11 @@ function newConsumptionSummaryEntry(year: number, categories: string[]) {
     dateLastUpdated: Timestamp.fromDate(new Date()),
     carbonEmission: {
       total: 0,
-      label: undefined,
+      label: null,
     },
     energyExpended: {
       total: 0,
-      label: undefined,
+      label: null,
     },
     categories: [],
     months: [],
@@ -40,12 +40,12 @@ function newConsumptionSummaryEntry(year: number, categories: string[]) {
       carbonEmission: {
         total: 0,
         percentage: 0,
-        label: undefined,
+        label: null,
       },
       energyExpended: {
         total: 0,
         percentage: 0,
-        label: undefined,
+        label: null,
       },
       consumptionDays: {},
     });
@@ -176,7 +176,7 @@ function updateConsumptionSummaryEntries(
         }
 
         const monthlyConsumption = ensure(annualConsumption.months.find((e) => e.number === month));
-        console.log("--- monthlyConsumption ---");
+        console.log("--- monthlyConsumption (1) ---");
         console.log(JSON.stringify(monthlyConsumption));
 
         // increase monthly consumption total
@@ -190,8 +190,6 @@ function updateConsumptionSummaryEntries(
           }
 
           const monthlyCategoryConsumption = ensure(monthlyConsumption.categories.find((e) => e.category === category));
-          console.log("--- monthlyCategoryConsumption ---");
-          console.log(JSON.stringify(monthlyCategoryConsumption));
 
           // only add consumption value if category matches
           if (category === consumption.category) {
@@ -206,18 +204,21 @@ function updateConsumptionSummaryEntries(
             thisEnergyUsedAnnualTotal += monthlyEnergyExpendedDistribution[year][month];
           }
 
-          // recalculate percentages
-          if (monthlyConsumption.carbonEmission.total != 0) {
-            monthlyCategoryConsumption.carbonEmission.percentage =
-              monthlyCategoryConsumption.carbonEmission.total / monthlyConsumption.carbonEmission.total;
-            monthlyCategoryConsumption.energyExpended.percentage =
-              monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total;
-          }
+          // recalculate percentages or set to zero if totals are zero (result is NaN)
+          monthlyCategoryConsumption.carbonEmission.percentage =
+            monthlyCategoryConsumption.carbonEmission.total / monthlyConsumption.carbonEmission.total ?? 0;
+
+          monthlyCategoryConsumption.energyExpended.percentage =
+            monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total ?? 0;
         });
+        console.log("--- monthlyConsumption (2) ---");
+        console.log(JSON.stringify(monthlyConsumption));
       });
 
       // iterate over consumption summary categories to update value of given consumption category and percentages for all
       annualConsumption.categories.forEach((categorySummary) => {
+        console.log("--- categorySummary ---");
+        console.log(JSON.stringify(categorySummary));
         if (categorySummary.category === consumption.category) {
           categorySummary.carbonEmission.total += thisCarbonEmissionAnnualTotal;
           categorySummary.energyExpended.total += thisEnergyUsedAnnualTotal;
@@ -231,9 +232,9 @@ function updateConsumptionSummaryEntries(
           );
         }
         categorySummary.carbonEmission.percentage =
-          categorySummary.carbonEmission.total / annualConsumption.carbonEmission.total;
+          categorySummary.carbonEmission.total / annualConsumption.carbonEmission.total ?? 0;
         categorySummary.energyExpended.percentage =
-          categorySummary.energyExpended.total / annualConsumption.energyExpended.total;
+          categorySummary.energyExpended.total / annualConsumption.energyExpended.total ?? 0;
       });
     });
 
@@ -261,7 +262,7 @@ function calculateConsumptionLabel(
 ) {
   if (!consumptionSummaryEntries) {
     throw new Error("consumptionSummaryEntries is undefined: " + JSON.stringify(consumptionSummaryEntries));
-  };
+  }
 
   consumptionSummaryEntries.forEach((consumptionSummaryEntry) => {
     const overallCarbonEmissionLabels: LabelValues[] = [];
@@ -441,6 +442,8 @@ function consumptionDaysArray(
     }
   }
 
+  console.log("--- consumptionDaysArray ---")
+  console.log(JSON.stringify(arr))
   return arr;
 }
 
@@ -477,8 +480,8 @@ export async function calculateConsumptionSummary(
       });
     });
 
-  console.log("--- consumptionSummaryArray (1) ---")
-  console.log(JSON.stringify(consumptionSummaryArray))
+  console.log("--- consumptionSummaryArray (1) ---");
+  console.log(JSON.stringify(consumptionSummaryArray));
 
   if (latestConsumptionSummaryVersion == user.consumptionSummaryVersion && consumptionSummaryArray.length > 0) {
     consumptionSummaryArray = updateConsumptionSummaryEntries(
@@ -496,17 +499,17 @@ export async function calculateConsumptionSummary(
       .get()
       .then((snapshot) => {
         snapshot.forEach((consumption) => {
-          console.log("--- consumption in forEach loop ---")
-          console.log(JSON.stringify(consumption))
+          console.log("--- consumption in forEach loop ---");
+          console.log(JSON.stringify(consumption));
           consumptionSummaryArray = updateConsumptionSummaryEntries(
             consumption.data() as Consumption,
             countryLabels,
             latestConsumptionSummaryVersion,
             consumptionSummaryArray
           );
-          console.log("--- consumptionSummaryArray (2) ---")
-          console.log(JSON.stringify(consumptionSummaryArray))
-          console.log("--- END FOREACH LOOP ---")
+          console.log("--- consumptionSummaryArray (2) ---");
+          console.log(JSON.stringify(consumptionSummaryArray));
+          console.log("--- END FOREACH LOOP ---");
         });
       });
     if (consumptionSummaryArray) {
@@ -517,8 +520,8 @@ export async function calculateConsumptionSummary(
     }
   }
 
-  console.log("--- consumptionSummaryArray (3) ---")
-  console.log(JSON.stringify(consumptionSummaryArray))
+  console.log("--- consumptionSummaryArray (3) ---");
+  console.log(JSON.stringify(consumptionSummaryArray));
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
     await admin
