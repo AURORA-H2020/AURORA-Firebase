@@ -119,7 +119,9 @@ function updateConsumptionSummaryEntries(
     } else if (consumption.transportation) {
       startDate = consumption.transportation.dateOfTravel;
       endDate = consumption.transportation.dateOfTravel;
-    } else return undefined;
+    } else {
+      throw new Error("Consumption type cannot unknown for consumption:" + JSON.stringify(consumption));
+    }
 
     const monthlyEnergyExpendedDistribution = calculateMonthlyConsumptionDistribution(
       startDate,
@@ -133,7 +135,12 @@ function updateConsumptionSummaryEntries(
     );
 
     if (!monthlyCarbonEmissionDistribution || !monthlyEnergyExpendedDistribution) {
-      return undefined;
+      throw new Error(
+        "Monthly Distribution undefined. \n monthlyCarbonEmissionDistribution: " +
+          JSON.stringify(monthlyCarbonEmissionDistribution) +
+          "\n monthlyEnergySpendedDistribution: " +
+          JSON.stringify(monthlyEnergyExpendedDistribution)
+      );
     }
 
     // iterate over years in consumption and ensure a consumption summary exists.
@@ -153,7 +160,7 @@ function updateConsumptionSummaryEntries(
       const annualConsumption = ensure(consumptionSummaryEntries.find((e) => e.year === year));
       console.log("--- annualConsumption ---");
       console.log(JSON.stringify(annualConsumption));
-      
+
       let thisCarbonEmissionAnnualTotal = 0;
       let thisEnergyUsedAnnualTotal = 0;
 
@@ -233,7 +240,11 @@ function updateConsumptionSummaryEntries(
     calculateConsumptionLabel(labelStructure, consumptionSummaryEntries);
 
     return consumptionSummaryEntries;
-  } else return undefined;
+  } else {
+    throw new Error(
+      "Carbon Emission and/or Energy Expended do not exist on consumption:" + JSON.stringify(consumption)
+    );
+  }
 }
 
 function ensure<T>(argument: T | undefined | null, message = "This value was promised to be there."): T {
@@ -248,7 +259,9 @@ function calculateConsumptionLabel(
   labelStructure: LabelStructure,
   consumptionSummaryEntries?: ConsumptionSummaryEntry[]
 ) {
-  if (!consumptionSummaryEntries) return undefined;
+  if (!consumptionSummaryEntries) {
+    throw new Error("consumptionSummaryEntries is undefined: " + JSON.stringify(consumptionSummaryEntries));
+  };
 
   consumptionSummaryEntries.forEach((consumptionSummaryEntry) => {
     const overallCarbonEmissionLabels: LabelValues[] = [];
@@ -446,10 +459,10 @@ export async function calculateConsumptionSummary(
 
   let consumptionSummaryArray: ConsumptionSummaryEntry[] | undefined = [];
 
-  console.log("--- countryLabels ---")
-  console.log(JSON.stringify(countryLabels))
-  console.log("--- consumption ---")
-  console.log(JSON.stringify(consumption))
+  console.log("--- countryLabels ---");
+  console.log(JSON.stringify(countryLabels));
+  console.log("--- consumption ---");
+  console.log(JSON.stringify(consumption));
 
   // get existing consumption summary, if any.
   await admin
