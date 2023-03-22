@@ -5,5 +5,5 @@
 export interface ConsumptionObject {
   total: number;
   percentage?: number;
-  label?: string | undefined; // null/undefined instead of "?"
+  label?: string | null; // null/undefined instead of "?"
 }
