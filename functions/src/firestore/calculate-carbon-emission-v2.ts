@@ -6,9 +6,9 @@ import { Timestamp } from "firebase-admin/firestore";
 import { FirestoreCollections } from "../utils/firestore-collections";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
-import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
+// import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import { CountryMetric } from "../models/country/metric/country-metric";
-import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary"
+import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary";
 // import { firestore } from "firebase-admin";
 
 // Initialize Firebase Admin SDK
@@ -49,34 +49,39 @@ export const calculateCarbonEmissionsBeta = functions
         .collection(FirestoreCollections.users.name)
         .doc(context.params.userId)
         .collection(FirestoreCollections.users.consumptions.name)
-        .get().then(snapshot => {
-          snapshot.forEach(async singleConsumption => {
-            const calculatedConsumptions = await calculateConsumptions(singleConsumption.data() as Consumption, user, latestConsumptionVersion, context)
-            if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended){
+        .get()
+        .then((snapshot) => {
+          snapshot.forEach(async (singleConsumption) => {
+            const calculatedConsumptions = await calculateConsumptions(
+              singleConsumption.data() as Consumption,
+              user,
+              latestConsumptionVersion,
+              context
+            );
+            if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
               singleConsumption.ref.update({
                 carbonEmissions: calculatedConsumptions.carbonEmission,
                 energyExpended: calculatedConsumptions.energyExpended,
                 version: latestConsumptionVersion,
-              })
+              });
             }
-          })
-        })
-        // Write latest version to user after recalculating all consumptions
-        await admin
-        .firestore()
-        .collection(FirestoreCollections.users.name)
-        .doc(context.params.userId)
-        .update({
-          latestConsumptionVersion: latestConsumptionVersion,
+          });
         });
+      // Write latest version to user after recalculating all consumptions
+      await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
+        latestConsumptionVersion: latestConsumptionVersion,
+      });
     }
 
     // Check if document still exits. No calculation necessary if it has been deleted
-    const consumption = snapshot.after.data() as Consumption;
     if (snapshot.after.exists) {
-
       // Calculate carbon emissions
-      const calculatedConsumptions = await calculateConsumptions(consumption, user, latestConsumptionVersion, context);
+      const calculatedConsumptions = await calculateConsumptions(
+        snapshot.after.data() as Consumption,
+        user,
+        latestConsumptionVersion,
+        context
+      );
       // Check if carbon emissions are available
       if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
         // Update consumption and set calculated carbon emissions
@@ -90,12 +95,16 @@ export const calculateCarbonEmissionsBeta = functions
             version: latestConsumptionVersion,
           });
       }
+
+      calculateConsumptionSummary(user, snapshot.after.data() as Consumption, context);
+    } else {
+      // if there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
+      calculateConsumptionSummary(user, snapshot.before.data() as Consumption, context, true);
     }
 
     // NEW CONSUMPTION SUMMARY
-    calculateConsumptionSummary(user, consumption, context)
 
-
+    /*
     // OLD CONSUMPTION SUMMARY
     // Calculate consumption summary
     const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
@@ -108,6 +117,7 @@ export const calculateCarbonEmissionsBeta = functions
         .doc(context.params.userId)
         .update({ consumptionSummary: calculatedConsumptionSummary });
     }
+    */
   });
 
 /**
@@ -397,6 +407,7 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp | undefi
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
+/*
 async function consumptionSummary(
   snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
   context: functions.EventContext<Record<string, string>>
@@ -467,6 +478,7 @@ async function consumptionSummary(
   return consumptionSummary;
 }
 
+
 function newConsumptionSummary(): ConsumptionSummary {
   return {
     totalCarbonEmissions: 0,
@@ -489,6 +501,7 @@ function newConsumptionSummary(): ConsumptionSummary {
     ],
   };
 }
+*/
 
 /**
  * [copyMetrics]
