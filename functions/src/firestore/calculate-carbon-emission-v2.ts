@@ -33,6 +33,10 @@ export const calculateCarbonEmissionsBeta = functions
 
     // check if this is a reinvocation and exit function if it is
     // check that document has not been deleted.
+    console.log("--- Snapshot AFTER ---")
+    console.log(JSON.stringify(snapshot.after.data()))
+    console.log("--- Snapshot BEFORE ---")
+    console.log(JSON.stringify(snapshot.before.data()))
     if (snapshot.after.exists) {
       // check if the user entered value hasn't changed
       if (snapshot.after.data()?.value == snapshot.before.data()?.value) {
@@ -123,6 +127,7 @@ export const calculateCarbonEmissionsBeta = functions
         calculateConsumptionSummary(user, context, consumption as Consumption);
       } else {
         // if there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
+        console.log("Delete Document: " + snapshot.before.data())
         calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
       }
     }
