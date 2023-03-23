@@ -519,8 +519,9 @@ function runMigrations(user: User, context: functions.EventContext<Record<string
   // simple migration to delete the old consumptionSummary property, if present
   if (user.consumptionSummary) {
     admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
-      consumptionSummary: admin.firestore.FieldValue.delete()
-    })
+      consumptionSummary: admin.firestore.FieldValue.delete(),
+    });
+    console.log("Migration applied. Removed consumptionSummary from User " + context.params.userId);
   }
 }
 

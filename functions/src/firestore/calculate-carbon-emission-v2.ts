@@ -6,7 +6,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { FirestoreCollections } from "../utils/firestore-collections";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
-// import { CountryMetric } from "../models/country/metric/country-metric";
+import { CountryMetric } from "../models/country/metric/country-metric";
 import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary";
 
 // Initialize Firebase Admin SDK
@@ -70,39 +70,35 @@ export const calculateCarbonEmissionsBeta = functions
         .get()
         .then((snapshot) => {
           snapshot.forEach((singleConsumption) => {
-            const calculatedConsumptions = calculateConsumption(
-              singleConsumption.data() as Consumption,
-              user,
-              context
-            );
+            const calculatedConsumptions = calculateConsumption(singleConsumption.data() as Consumption, user, context);
             if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
               singleConsumption.ref.update({
                 carbonEmissions: calculatedConsumptions.carbonEmission,
                 energyExpended: calculatedConsumptions.energyExpended,
                 version: latestConsumptionVersion,
-                updatedAt: Timestamp.fromDate(new Date)
+                updatedAt: Timestamp.fromDate(new Date()),
               });
             }
           });
         });
       // Write latest version to user after recalculating all consumptions
-      await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
-        consumptionMeta: {
-          version: latestConsumptionVersion,
-          lastRecalculation: Timestamp.fromDate(new Date),
-        }
-      });
+      await admin
+        .firestore()
+        .collection(FirestoreCollections.users.name)
+        .doc(context.params.userId)
+        .update({
+          consumptionMeta: {
+            version: latestConsumptionVersion,
+            lastRecalculation: Timestamp.fromDate(new Date()),
+          },
+        });
       // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
       calculateConsumptionSummary(user, context);
     } else {
       // Check if document still exists. No calculation necessary if it has been deleted
       if (snapshot.after.exists) {
         // Calculate carbon emissions
-        const calculatedConsumption = await calculateConsumption(
-          snapshot.after.data() as Consumption,
-          user,
-          context
-        );
+        const calculatedConsumption = await calculateConsumption(snapshot.after.data() as Consumption, user, context);
         // Check if carbon emissions are available
         if (calculatedConsumption?.carbonEmission && calculatedConsumption.energyExpended) {
           // Update consumption and set calculated carbon emissions
@@ -114,7 +110,7 @@ export const calculateCarbonEmissionsBeta = functions
               carbonEmissions: calculatedConsumption.carbonEmission,
               energyExpended: calculatedConsumption.energyExpended,
               version: latestConsumptionVersion,
-              updatedAt: Timestamp.fromDate(new Date)
+              updatedAt: Timestamp.fromDate(new Date()),
             });
         }
 
@@ -396,8 +392,8 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
  * @param countryID ID of the associated country.
  * @param consumptionDate Timestamp of the consumption occurance to get the most viable metric version.
  */
-function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
-  const metrics = (admin
+async function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
+  const metrics = (await admin
     .firestore()
     .collection(FirestoreCollections.countries.name)
     .doc(countryID)
@@ -412,9 +408,10 @@ function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
       } else {
         return undefined;
       }
-    }));
+    })) as CountryMetric;
   if (!metrics) {
     throw new Error("Country not found");
   }
   return metrics;
 }
+
