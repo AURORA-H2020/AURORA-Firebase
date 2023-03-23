@@ -54,7 +54,14 @@ export const calculateCarbonEmissionsBeta = functions
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
     if (user.consumptionVersion != latestConsumptionVersion || !user.consumptionVersion) {
-      console.log("Consumption version mismatch. Recalculating consumption for user: " + context.params.userId);
+      console.log(
+        "Consumption version mismatch.\n Was: " +
+          user.consumptionVersion +
+          " | Expected: " +
+          latestConsumptionVersion +
+          " \n Recalculating consumption summary for user: " +
+          context.params.userId
+      );
       await admin
         .firestore()
         .collection(FirestoreCollections.users.name)
