@@ -6,7 +6,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { FirestoreCollections } from "../utils/firestore-collections";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
-import { CountryMetric } from "../models/country/metric/country-metric";
+// import { CountryMetric } from "../models/country/metric/country-metric";
 import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary";
 
 // Initialize Firebase Admin SDK
@@ -69,8 +69,8 @@ export const calculateCarbonEmissionsBeta = functions
         .collection(FirestoreCollections.users.consumptions.name)
         .get()
         .then((snapshot) => {
-          snapshot.forEach(async (singleConsumption) => {
-            const calculatedConsumptions = await calculateConsumption(
+          snapshot.forEach((singleConsumption) => {
+            const calculatedConsumptions = calculateConsumption(
               singleConsumption.data() as Consumption,
               user,
               context
@@ -142,11 +142,11 @@ export const calculateCarbonEmissionsBeta = functions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-async function calculateConsumption(
+function calculateConsumption(
   consumption: Consumption,
   user: User,
   context: functions.EventContext<Record<string, string>>
-): Promise<{ carbonEmission: number; energyExpended: number } | undefined> {
+): { carbonEmission: number; energyExpended: number } | undefined {
   // Country to fall back to in case returned EF value is not a number
   const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
 
@@ -173,12 +173,12 @@ async function calculateConsumption(
         );
       }
 
-      let metrics = await getMetrics(user.country, consumptionDate);
+      let metrics = getMetrics(user.country, consumptionDate);
       let heatingEF = getHeatingEF(heatingData, metrics);
 
       // Fallback in case heatingEF is not a Number
       if (!heatingEF) {
-        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = getMetrics(metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
 
@@ -214,12 +214,12 @@ async function calculateConsumption(
         );
       }
 
-      let metrics = await getMetrics(user.country, consumptionDate);
+      let metrics = getMetrics(user.country, consumptionDate);
       let electricityEF = getElectricityEF(electricityData, metrics);
 
       // Fallback in case electricityEF is not a Number
       if (!electricityEF) {
-        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = getMetrics(metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
       }
 
@@ -254,12 +254,12 @@ async function calculateConsumption(
         );
       }
 
-      let metrics = await getMetrics(user.country, consumptionDate);
+      let metrics = getMetrics(user.country, consumptionDate);
       let transportationFactors = getTransportationEF(transportationData, metrics);
 
       // Fallback in case transportationEF is not a Number
       if (!transportationFactors) {
-        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = getMetrics(metricsFallbackCountry, consumptionDate);
         transportationFactors = getTransportationEF(transportationData, metrics);
       }
 
@@ -396,8 +396,8 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
  * @param countryID ID of the associated country.
  * @param consumptionDate Timestamp of the consumption occurance to get the most viable metric version.
  */
-async function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
-  const metrics = (await admin
+function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
+  const metrics = (admin
     .firestore()
     .collection(FirestoreCollections.countries.name)
     .doc(countryID)
@@ -412,7 +412,7 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp | undefi
       } else {
         return undefined;
       }
-    })) as CountryMetric;
+    }));
   if (!metrics) {
     throw new Error("Country not found");
   }
