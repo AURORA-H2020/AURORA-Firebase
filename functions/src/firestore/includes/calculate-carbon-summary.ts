@@ -567,7 +567,7 @@ export async function calculateConsumptionSummary(
   }
 
   if (
-    latestConsumptionSummaryVersion == user.consumptionMeta.version &&
+    latestConsumptionSummaryVersion == user.consumptionMeta?.version &&
     consumptionSummaryArray.length > 0 &&
     consumption &&
     !isXDaysAgo(user.consumptionMeta.lastRecalculation, 14)
@@ -582,7 +582,7 @@ export async function calculateConsumptionSummary(
   } else {
     console.log(
       "Consumption summary version mismatch or outdated. Version was: " +
-        user.consumptionSummaryMeta.version +
+        user.consumptionSummaryMeta?.version +
         " | Expected: " +
         latestConsumptionSummaryVersion +
         " Recalculating consumption summary for user: " +

@@ -53,10 +53,10 @@ export const calculateCarbonEmissionsBeta = functions
     const latestConsumptionVersion = "1.0.0";
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
-    if (user.consumptionMeta.version != latestConsumptionVersion || !user.consumptionMeta) {
+    if (!user.consumptionMeta || user.consumptionMeta?.version != latestConsumptionVersion) {
       console.log(
         "Consumption version mismatch. Was: " +
-          user.consumptionMeta.version +
+          user.consumptionMeta?.version +
           " | Expected: " +
           latestConsumptionVersion +
           "  Recalculating consumptions for user: " +
