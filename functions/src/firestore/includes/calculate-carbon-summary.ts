@@ -128,9 +128,9 @@ function updateConsumptionSummaryEntries(
 
     if (!monthlyCarbonEmissionDistribution || !monthlyEnergyExpendedDistribution) {
       throw new Error(
-        "Monthly Distribution undefined. \n monthlyCarbonEmissionDistribution: " +
+        "Monthly Distribution undefined. monthlyCarbonEmissionDistribution: " +
           JSON.stringify(monthlyCarbonEmissionDistribution) +
-          "\n monthlyEnergySpendedDistribution: " +
+          " monthlyEnergySpendedDistribution: " +
           JSON.stringify(monthlyEnergyExpendedDistribution)
       );
     }
@@ -318,9 +318,9 @@ function calculateConsumptionLabel(
 
       if (!carbonEmissionCategoryLabels || !energyExpendedCategoryLabels) {
         throw new Error(
-          "Category Labels undefined. \n carbonEmissionCategoryLabels: " +
+          "Category Labels undefined. carbonEmissionCategoryLabels: " +
             JSON.stringify(carbonEmissionCategoryLabels) +
-            "\n energyExpendedCategoryLabels: " +
+            " energyExpendedCategoryLabels: " +
             JSON.stringify(energyExpendedCategoryLabels)
         );
       }
@@ -515,6 +515,26 @@ function consumptionDaysArray(
   return arr;
 }
 
+function runMigrations(user: User) {
+  // simple migration to delete the old consumptionSummary property, if present
+  if (user.consumptionSummary) {
+    delete user.consumptionSummary;
+  }
+}
+
+function isXDaysAgo(date: Timestamp | undefined, thresholdDays: number): boolean {
+  if (date) {
+    const currentTime = new Date();
+    const dateToCheck = new Date(date.seconds * 1000);
+    const diffDays = Math.abs(currentTime.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24);
+
+    console.log("diffDays: " + diffDays);
+
+    if (diffDays > thresholdDays) return true;
+    else return false;
+  } else return true;
+}
+
 export async function calculateConsumptionSummary(
   user: User,
   context: functions.EventContext<Record<string, string>>,
@@ -547,9 +567,10 @@ export async function calculateConsumptionSummary(
   }
 
   if (
-    latestConsumptionSummaryVersion == user.consumptionSummaryVersion &&
+    latestConsumptionSummaryVersion == user.consumptionMeta.version &&
     consumptionSummaryArray.length > 0 &&
-    consumption
+    consumption &&
+    !isXDaysAgo(user.consumptionMeta.lastRecalculation, 14)
   ) {
     consumptionSummaryArray = updateConsumptionSummaryEntries(
       consumption as Consumption,
@@ -560,13 +581,16 @@ export async function calculateConsumptionSummary(
     );
   } else {
     console.log(
-      "Consumption summary version mismatch.\n Was: " +
-        user.consumptionSummaryVersion +
+      "Consumption summary version mismatch or outdated. Version was: " +
+        user.consumptionSummaryMeta.version +
         " | Expected: " +
         latestConsumptionSummaryVersion +
-        " \n Recalculating consumption summary for user: " +
+        " Recalculating consumption summary for user: " +
         context.params.userId
     );
+    // run migrations, as risk is high that they havent been applied yet.
+    runMigrations(user);
+
     await admin
       .firestore()
       .collection(FirestoreCollections.users.name)
@@ -586,11 +610,18 @@ export async function calculateConsumptionSummary(
           consumptionSummaryArray = [];
         }
       });
-    if (consumptionSummaryArray) {
+    if (consumptionSummaryArray.length > 0) {
       // Write latest version to user after recalculating all consumptions
-      await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
-        consumptionSummaryVersion: latestConsumptionSummaryVersion,
-      });
+      await admin
+        .firestore()
+        .collection(FirestoreCollections.users.name)
+        .doc(context.params.userId)
+        .update({
+          consumptionSummaryMeta: {
+            version: latestConsumptionSummaryVersion,
+            lastRecalculation: Timestamp.fromDate(new Date()),
+          },
+        });
     }
     // Also delete all documents in consumption-summary collection
     admin

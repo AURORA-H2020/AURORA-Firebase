@@ -53,13 +53,13 @@ export const calculateCarbonEmissionsBeta = functions
     const latestConsumptionVersion = "1.0.0";
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
-    if (user.consumptionVersion != latestConsumptionVersion || !user.consumptionVersion) {
+    if (user.consumptionMeta.version != latestConsumptionVersion || !user.consumptionMeta) {
       console.log(
-        "Consumption version mismatch.\n Was: " +
-          user.consumptionVersion +
+        "Consumption version mismatch. Was: " +
+          user.consumptionMeta.version +
           " | Expected: " +
           latestConsumptionVersion +
-          " \n Recalculating consumption summary for user: " +
+          "  Recalculating consumptions for user: " +
           context.params.userId
       );
       await admin
@@ -70,10 +70,9 @@ export const calculateCarbonEmissionsBeta = functions
         .get()
         .then((snapshot) => {
           snapshot.forEach(async (singleConsumption) => {
-            const calculatedConsumptions = await calculateConsumptions(
+            const calculatedConsumptions = await calculateConsumption(
               singleConsumption.data() as Consumption,
               user,
-              latestConsumptionVersion,
               context
             );
             if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
@@ -81,13 +80,17 @@ export const calculateCarbonEmissionsBeta = functions
                 carbonEmissions: calculatedConsumptions.carbonEmission,
                 energyExpended: calculatedConsumptions.energyExpended,
                 version: latestConsumptionVersion,
+                updatedAt: Timestamp.fromDate(new Date)
               });
             }
           });
         });
       // Write latest version to user after recalculating all consumptions
       await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
-        consumptionVersion: latestConsumptionVersion,
+        consumptionMeta: {
+          version: latestConsumptionVersion,
+          lastRecalculation: Timestamp.fromDate(new Date),
+        }
       });
       // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
       calculateConsumptionSummary(user, context);
@@ -95,23 +98,23 @@ export const calculateCarbonEmissionsBeta = functions
       // Check if document still exists. No calculation necessary if it has been deleted
       if (snapshot.after.exists) {
         // Calculate carbon emissions
-        const calculatedConsumptions = await calculateConsumptions(
+        const calculatedConsumption = await calculateConsumption(
           snapshot.after.data() as Consumption,
           user,
-          latestConsumptionVersion,
           context
         );
         // Check if carbon emissions are available
-        if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
+        if (calculatedConsumption?.carbonEmission && calculatedConsumption.energyExpended) {
           // Update consumption and set calculated carbon emissions
           await admin
             .firestore()
             .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
             .doc(context.params.consumptionId)
             .update({
-              carbonEmissions: calculatedConsumptions.carbonEmission,
-              energyExpended: calculatedConsumptions.energyExpended,
+              carbonEmissions: calculatedConsumption.carbonEmission,
+              energyExpended: calculatedConsumption.energyExpended,
               version: latestConsumptionVersion,
+              updatedAt: Timestamp.fromDate(new Date)
             });
         }
 
@@ -139,10 +142,9 @@ export const calculateCarbonEmissionsBeta = functions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-async function calculateConsumptions(
+async function calculateConsumption(
   consumption: Consumption,
   user: User,
-  latestConsumptionVersion: string,
   context: functions.EventContext<Record<string, string>>
 ): Promise<{ carbonEmission: number; energyExpended: number } | undefined> {
   // Country to fall back to in case returned EF value is not a number
