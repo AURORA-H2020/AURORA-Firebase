@@ -515,10 +515,12 @@ function consumptionDaysArray(
   return arr;
 }
 
-function runMigrations(user: User) {
+function runMigrations(user: User, context: functions.EventContext<Record<string, string>>) {
   // simple migration to delete the old consumptionSummary property, if present
   if (user.consumptionSummary) {
-    delete user.consumptionSummary;
+    admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).update({
+      consumptionSummary: admin.firestore.FieldValue.delete()
+    })
   }
 }
 
@@ -527,8 +529,6 @@ function isXDaysAgo(date: Timestamp | undefined, thresholdDays: number): boolean
     const currentTime = new Date();
     const dateToCheck = new Date(date.seconds * 1000);
     const diffDays = Math.abs(currentTime.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24);
-
-    console.log("diffDays: " + diffDays);
 
     if (diffDays > thresholdDays) return true;
     else return false;
@@ -570,7 +570,7 @@ export async function calculateConsumptionSummary(
     latestConsumptionSummaryVersion == user.consumptionMeta?.version &&
     consumptionSummaryArray.length > 0 &&
     consumption &&
-    !isXDaysAgo(user.consumptionMeta.lastRecalculation, 14)
+    !isXDaysAgo(user.consumptionSummaryMeta.lastRecalculation, 14)
   ) {
     consumptionSummaryArray = updateConsumptionSummaryEntries(
       consumption as Consumption,
@@ -589,7 +589,7 @@ export async function calculateConsumptionSummary(
         context.params.userId
     );
     // run migrations, as risk is high that they havent been applied yet.
-    runMigrations(user);
+    runMigrations(user, context);
 
     await admin
       .firestore()
@@ -606,9 +606,6 @@ export async function calculateConsumptionSummary(
             consumptionSummaryArray
           );
         });
-        if (snapshot.empty) {
-          consumptionSummaryArray = [];
-        }
       });
     if (consumptionSummaryArray.length > 0) {
       // Write latest version to user after recalculating all consumptions
@@ -623,8 +620,9 @@ export async function calculateConsumptionSummary(
           },
         });
     }
+
     // Also delete all documents in consumption-summary collection
-    admin
+    await admin
       .firestore()
       .collection(FirestoreCollections.users.name)
       .doc(context.params.userId)
