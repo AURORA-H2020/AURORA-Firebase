@@ -168,8 +168,8 @@ function updateConsumptionSummaryEntries(
         const monthlyConsumption = ensure(annualConsumption.months.find((e) => e.number === month));
 
         // increase monthly consumption total
-        monthlyConsumption.carbonEmission.total += monthlyCarbonEmissionDistribution[year][month];
-        monthlyConsumption.energyExpended.total += monthlyEnergyExpendedDistribution[year][month];
+        monthlyConsumption.carbonEmission.total = normaliseNumbers((monthlyConsumption.carbonEmission.total + monthlyCarbonEmissionDistribution[year][month]), "number");
+        monthlyConsumption.energyExpended.total = normaliseNumbers((monthlyConsumption.energyExpended.total + monthlyEnergyExpendedDistribution[year][month]), "number");
 
         // loop over categories and update them accordingly. This is required for updating percentages in all categories
         categories.forEach((category) => {
@@ -181,31 +181,31 @@ function updateConsumptionSummaryEntries(
 
           // only add consumption value if category matches
           if (category === consumption.category) {
-            monthlyCategoryConsumption.carbonEmission.total += monthlyCarbonEmissionDistribution[year][month];
-            monthlyCategoryConsumption.energyExpended.total += monthlyEnergyExpendedDistribution[year][month];
+            monthlyCategoryConsumption.carbonEmission.total = normaliseNumbers((monthlyCategoryConsumption.carbonEmission.total+monthlyCarbonEmissionDistribution[year][month]),"number");
+            monthlyCategoryConsumption.energyExpended.total = normaliseNumbers((monthlyCategoryConsumption.energyExpended.total+monthlyEnergyExpendedDistribution[year][month]),"number");
 
             // add consumption value to overall total
-            annualConsumption.carbonEmission.total += monthlyCarbonEmissionDistribution[year][month];
-            thisCarbonEmissionAnnualTotal += monthlyCarbonEmissionDistribution[year][month];
+            annualConsumption.carbonEmission.total = normaliseNumbers((annualConsumption.carbonEmission.total+monthlyCarbonEmissionDistribution[year][month]),"number");
+            thisCarbonEmissionAnnualTotal = normaliseNumbers((thisCarbonEmissionAnnualTotal+monthlyCarbonEmissionDistribution[year][month]),"number");
 
-            annualConsumption.energyExpended.total += monthlyEnergyExpendedDistribution[year][month];
-            thisEnergyExpendedAnnualTotal += monthlyEnergyExpendedDistribution[year][month];
+            annualConsumption.energyExpended.total = normaliseNumbers((annualConsumption.energyExpended.total+monthlyEnergyExpendedDistribution[year][month]),"number");
+            thisEnergyExpendedAnnualTotal = normaliseNumbers((thisEnergyExpendedAnnualTotal+monthlyEnergyExpendedDistribution[year][month]),"number");
           }
 
           // recalculate percentages or set to zero if totals are zero (result is NaN)
           monthlyCategoryConsumption.carbonEmission.percentage =
-            monthlyCategoryConsumption.carbonEmission.total / monthlyConsumption.carbonEmission.total ?? 0;
+            normaliseNumbers((monthlyCategoryConsumption.carbonEmission.total / monthlyConsumption.carbonEmission.total), "percentage") ?? 0;
 
           monthlyCategoryConsumption.energyExpended.percentage =
-            monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total ?? 0;
+            normaliseNumbers((monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total), "percentage") ?? 0;
         });
       });
 
       // iterate over consumption summary categories to update value of given consumption category and percentages for all
       annualConsumption.categories.forEach((categorySummary) => {
         if (categorySummary.category === consumption.category) {
-          categorySummary.carbonEmission.total += thisCarbonEmissionAnnualTotal;
-          categorySummary.energyExpended.total += thisEnergyExpendedAnnualTotal;
+          categorySummary.carbonEmission.total = normaliseNumbers((categorySummary.carbonEmission.total+thisCarbonEmissionAnnualTotal), "number");
+          categorySummary.energyExpended.total = normaliseNumbers((categorySummary.energyExpended.total+thisEnergyExpendedAnnualTotal), "number");
           // create array with count of consumptions per day over a year
           categorySummary.consumptionDays = consumptionDaysArray(
             startDate,
@@ -216,9 +216,9 @@ function updateConsumptionSummaryEntries(
           );
         }
         categorySummary.carbonEmission.percentage =
-          categorySummary.carbonEmission.total / annualConsumption.carbonEmission.total ?? 0;
+          normaliseNumbers((categorySummary.carbonEmission.total / annualConsumption.carbonEmission.total), "percentage") ?? 0;
         categorySummary.energyExpended.percentage =
-          categorySummary.energyExpended.total / annualConsumption.energyExpended.total ?? 0;
+          normaliseNumbers((categorySummary.energyExpended.total / annualConsumption.energyExpended.total), "percentage") ?? 0;
       });
     });
 
@@ -238,6 +238,24 @@ function ensure<T>(argument: T | undefined | null, message = "This value was pro
   }
 
   return argument;
+}
+
+function normaliseNumbers (number: number, type: "percentage" | "number") {
+    const considerAsZero = 0.000001
+    switch (type) {
+        case "percentage": {
+            if (number > 1 || number < considerAsZero) {
+                return 0
+            }
+            else return number
+        }
+        case "number": {
+            if (number < considerAsZero) {
+                return 0
+            }
+            else return number
+        }
+    }
 }
 
 function calculateConsumptionLabel(
@@ -517,14 +535,17 @@ export async function calculateConsumptionSummary(
       .collection(FirestoreCollections.users.consumptions.name)
       .get()
       .then((snapshot) => {
-        snapshot.forEach((consumption) => {
+        snapshot.forEach((currentConsumption) => {
           consumptionSummaryArray = updateConsumptionSummaryEntries(
-            consumption.data() as Consumption,
+            currentConsumption.data() as Consumption,
             countryLabels,
             latestConsumptionSummaryVersion,
             consumptionSummaryArray
           );
         });
+        if (snapshot.empty) {
+          consumptionSummaryArray = [];
+        }
       });
     if (consumptionSummaryArray) {
       // Write latest version to user after recalculating all consumptions
@@ -532,6 +553,18 @@ export async function calculateConsumptionSummary(
         consumptionSummaryVersion: latestConsumptionSummaryVersion,
       });
     }
+    // Also delete all documents in consumption-summary collection
+    admin
+      .firestore()
+      .collection(FirestoreCollections.users.name)
+      .doc(context.params.userId)
+      .collection(FirestoreCollections.users.consumptionSummaries.name)
+      .get()
+      .then((querySnapshot) => {
+        querySnapshot.docs.forEach((snapshot) => {
+          snapshot.ref.delete();
+        });
+      });
   }
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
