@@ -300,13 +300,7 @@ function calculateConsumptionLabel(
         singleEnergyExpendedLabel.minimum *= consumptionLabelFactor;
       });
 
-      console.log("--- Label Category (CE): ",categorySummary.category,"---")
-      console.log(JSON.stringify(carbonEmissionCategoryLabels))
-      console.log("--- Label Category (EE): ",categorySummary.category,"---")
-      console.log(JSON.stringify(energyExpendedCategoryLabels))
-      console.log("--- Label Factor for: ",categorySummary.category,"---")
-      console.log(consumptionLabelFactor)
-
+      let foundCarbonEmissionLabel = false;
       carbonEmissionCategoryLabels.forEach((carbonEmissionLabel) => {
         if (
           carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
@@ -314,13 +308,16 @@ function calculateConsumptionLabel(
           consumptionDaysCount > 0
         ) {
           categorySummary.carbonEmission.label = carbonEmissionLabel.label;
-        } else categorySummary.carbonEmission.label = null;
+          foundCarbonEmissionLabel = true;
+        } else if (!foundCarbonEmissionLabel) {
+          categorySummary.carbonEmission.label = null;
+        }
 
         // construct overall Carbon Emission label
         const i = overallCarbonEmissionLabels.findIndex(
           (overallCarbonEmissionLabel) => overallCarbonEmissionLabel.label === carbonEmissionLabel.label
         );
-        if (i >= 0) {
+        if (i > -1) {
           overallCarbonEmissionLabels[i].maximum += carbonEmissionLabel.maximum;
           overallCarbonEmissionLabels[i].minimum += carbonEmissionLabel.minimum;
         } else {
@@ -328,6 +325,7 @@ function calculateConsumptionLabel(
         }
       });
 
+      let foundEnergyExpendedLabel = false;
       energyExpendedCategoryLabels.forEach((energyExpendedLabel) => {
         if (
           energyExpendedLabel.maximum > categorySummary.energyExpended.total &&
@@ -335,13 +333,16 @@ function calculateConsumptionLabel(
           consumptionDaysCount > 0
         ) {
           categorySummary.energyExpended.label = energyExpendedLabel.label;
-        } else categorySummary.energyExpended.label = null;
+          foundEnergyExpendedLabel = true;
+        } else if (!foundEnergyExpendedLabel) {
+          categorySummary.energyExpended.label = null;
+        }
 
         // construct overall Energy Expended label
         const i = overallEnergyExpendedLabels.findIndex(
           (overallEnergyExpendedLabel) => overallEnergyExpendedLabel.label === energyExpendedLabel.label
         );
-        if (i >= 0) {
+        if (i > -1) {
           overallEnergyExpendedLabels[i].maximum += energyExpendedLabel.maximum;
           overallEnergyExpendedLabels[i].minimum += energyExpendedLabel.minimum;
         } else {
@@ -501,6 +502,14 @@ export async function calculateConsumptionSummary(
       isDelete
     );
   } else {
+    console.log(
+      "Consumption summary version mismatch.\n Was: " +
+        user.consumptionSummaryVersion +
+        " | Expected: " +
+        latestConsumptionSummaryVersion +
+        " \n Recalculating consumption summary for user: " +
+        context.params.userId
+    );
     await admin
       .firestore()
       .collection(FirestoreCollections.users.name)
