@@ -332,9 +332,11 @@ function calculateConsumptionLabel(
       }
 
       let consumptionLabelFactor: number;
-      // Set consumptionLabelFactor to 1 for transportation, as it cannot be prorated across the year like the other categories. 100% of label boundaries are therefore applied at all times.
+      // Set consumptionLabelFactor to fraction of 1 for transportation, as it cannot be prorated across the year like the other categories, up to 5 entries.
       if (categorySummary.category == "transportation") {
-        consumptionLabelFactor = 1;
+        if (consumptionDaysCount <= 5) {
+          consumptionLabelFactor = consumptionDaysCount / 5;
+        } else consumptionLabelFactor = 1;
       } else {
         consumptionLabelFactor = consumptionDaysCount / Object.keys(categorySummary.consumptionDays).length;
       }

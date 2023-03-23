@@ -71,7 +71,11 @@ export const calculateCarbonEmissionsBeta = functions
         .get()
         .then((snapshot) => {
           snapshot.forEach(async (singleConsumption) => {
-            const calculatedConsumptions = await calculateConsumption(singleConsumption.data() as Consumption, user, context);
+            const calculatedConsumptions = await calculateConsumption(
+              singleConsumption.data() as Consumption,
+              user,
+              context
+            );
             if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
               singleConsumption.ref.update({
                 carbonEmissions: calculatedConsumptions.carbonEmission,
@@ -81,7 +85,7 @@ export const calculateCarbonEmissionsBeta = functions
               });
             }
           });
-        })
+        });
       // Write latest version to user after recalculating all consumptions
       await admin
         .firestore()
@@ -143,7 +147,7 @@ async function calculateConsumption(
   consumption: Consumption,
   user: User,
   context: functions.EventContext<Record<string, string>>
-): Promise<{ carbonEmission: number; energyExpended: number; } | undefined> {
+): Promise<{ carbonEmission: number; energyExpended: number } | undefined> {
   // Country to fall back to in case returned EF value is not a number
   const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
 
@@ -415,4 +419,3 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp | undefi
   }
   return metrics;
 }
-
