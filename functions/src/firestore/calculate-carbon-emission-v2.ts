@@ -67,10 +67,11 @@ export const calculateCarbonEmissionsBeta = functions
         .collection(FirestoreCollections.users.name)
         .doc(context.params.userId)
         .collection(FirestoreCollections.users.consumptions.name)
+        .orderBy("createdAt", "desc")
         .get()
         .then((snapshot) => {
-          snapshot.forEach((singleConsumption) => {
-            const calculatedConsumptions = calculateConsumption(singleConsumption.data() as Consumption, user, context);
+          snapshot.forEach(async (singleConsumption) => {
+            const calculatedConsumptions = await calculateConsumption(singleConsumption.data() as Consumption, user, context);
             if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
               singleConsumption.ref.update({
                 carbonEmissions: calculatedConsumptions.carbonEmission,
@@ -80,7 +81,7 @@ export const calculateCarbonEmissionsBeta = functions
               });
             }
           });
-        });
+        })
       // Write latest version to user after recalculating all consumptions
       await admin
         .firestore()
@@ -93,7 +94,7 @@ export const calculateCarbonEmissionsBeta = functions
           },
         });
       // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
-      calculateConsumptionSummary(user, context);
+      await calculateConsumptionSummary(user, context);
     } else {
       // Check if document still exists. No calculation necessary if it has been deleted
       if (snapshot.after.exists) {
@@ -138,11 +139,11 @@ export const calculateCarbonEmissionsBeta = functions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-function calculateConsumption(
+async function calculateConsumption(
   consumption: Consumption,
   user: User,
   context: functions.EventContext<Record<string, string>>
-): { carbonEmission: number; energyExpended: number } | undefined {
+): Promise<{ carbonEmission: number; energyExpended: number; } | undefined> {
   // Country to fall back to in case returned EF value is not a number
   const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
 
@@ -169,12 +170,12 @@ function calculateConsumption(
         );
       }
 
-      let metrics = getMetrics(user.country, consumptionDate);
+      let metrics = await getMetrics(user.country, consumptionDate);
       let heatingEF = getHeatingEF(heatingData, metrics);
 
       // Fallback in case heatingEF is not a Number
       if (!heatingEF) {
-        metrics = getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
 
@@ -210,12 +211,12 @@ function calculateConsumption(
         );
       }
 
-      let metrics = getMetrics(user.country, consumptionDate);
+      let metrics = await getMetrics(user.country, consumptionDate);
       let electricityEF = getElectricityEF(electricityData, metrics);
 
       // Fallback in case electricityEF is not a Number
       if (!electricityEF) {
-        metrics = getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
       }
 
@@ -250,12 +251,12 @@ function calculateConsumption(
         );
       }
 
-      let metrics = getMetrics(user.country, consumptionDate);
+      let metrics = await getMetrics(user.country, consumptionDate);
       let transportationFactors = getTransportationEF(transportationData, metrics);
 
       // Fallback in case transportationEF is not a Number
       if (!transportationFactors) {
-        metrics = getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         transportationFactors = getTransportationEF(transportationData, metrics);
       }
 
