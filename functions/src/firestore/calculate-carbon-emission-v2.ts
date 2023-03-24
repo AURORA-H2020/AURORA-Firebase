@@ -8,6 +8,7 @@ import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
 import { CountryMetric } from "../models/country/metric/country-metric";
 import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary";
+import { ConsumptionCategory } from "../models/consumption/consumption-category";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -32,8 +33,17 @@ export const calculateCarbonEmissionsBeta = functions
     // check if this is a reinvocation and exit function if it is
     // check that document has not been deleted.
     if (snapshot.after.data()) {
-      // check if the user entered value hasn't changed (no edit)
-      if (snapshot.after.data()?.value == snapshot.before.data()?.value) {
+      // check if the user entered data hasn't changed (no edit)
+      let isEdit = false;
+      const category: ConsumptionCategory = snapshot.after.data()?.category;
+      if (category == "transportation") {
+        if (JSON.stringify(snapshot.after.data()?.transportation) != JSON.stringify(snapshot.before.data()?.transportation))
+          isEdit = true;
+      } else {
+        if (JSON.stringify(snapshot.after.data()?.[category]) != JSON.stringify(snapshot.before.data()?.[category]))
+          isEdit = true;
+      }
+      if (snapshot.after.data()?.value == snapshot.before.data()?.value && !isEdit) {
         // check whether the energy and carbon calculated properties exist
         if (snapshot.after.data()?.energyExpended && snapshot.after.data()?.carbonEmissions) {
           return; // exit function without doing anything
