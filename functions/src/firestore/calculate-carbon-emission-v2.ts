@@ -30,11 +30,11 @@ export const calculateCarbonEmissionsBeta = functions
       return;
     }
 
+    let isEdit = false;
     // check if this is a reinvocation and exit function if it is
     // check that document has not been deleted.
     if (snapshot.after.data()) {
       // check if the user entered data hasn't changed (no edit)
-      let isEdit = false;
       const category: ConsumptionCategory = snapshot.after.data()?.category;
       if (category == "transportation") {
         if (JSON.stringify(snapshot.after.data()?.transportation) != JSON.stringify(snapshot.before.data()?.transportation))
@@ -144,15 +144,14 @@ export const calculateCarbonEmissionsBeta = functions
             .get()
         ).data();
 
-        // check if this is an edit by comparing the before and after data.
-        // Also check if "before" does not exist to ensure it is a new consumption
-        if (snapshot.after.data()?.value == snapshot.before.data()?.value || !snapshot.before.data()) {
+        // check if this is an edit
+        if (!isEdit) {
           // simply add the consumption if it is not an edit
           calculateConsumptionSummary(user, context, consumption as Consumption);
         } else {
           // Otherwise this is an edit and we remove the old consumption and add the new.
           await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
-          calculateConsumptionSummary(user, context, consumption as Consumption);
+          await calculateConsumptionSummary(user, context, consumption as Consumption);
         }
       } else {
         // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
