@@ -610,7 +610,7 @@ export async function calculateConsumptionSummary(
               consumptionSummaryArray
             );
           } catch (error) {
-            console.log(error)
+            console.log(error);
           }
         });
       });

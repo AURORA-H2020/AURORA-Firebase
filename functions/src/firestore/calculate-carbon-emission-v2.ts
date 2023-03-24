@@ -32,7 +32,7 @@ export const calculateCarbonEmissionsBeta = functions
     // check if this is a reinvocation and exit function if it is
     // check that document has not been deleted.
     if (snapshot.after.data()) {
-      // check if the user entered value hasn't changed
+      // check if the user entered value hasn't changed (no edit)
       if (snapshot.after.data()?.value == snapshot.before.data()?.value) {
         // check whether the energy and carbon calculated properties exist
         if (snapshot.after.data()?.energyExpended && snapshot.after.data()?.carbonEmissions) {
@@ -86,7 +86,7 @@ export const calculateCarbonEmissionsBeta = functions
                 });
               }
             } catch (error) {
-              console.log(error)
+              console.log(error);
             }
           });
         });
@@ -134,7 +134,16 @@ export const calculateCarbonEmissionsBeta = functions
             .get()
         ).data();
 
-        calculateConsumptionSummary(user, context, consumption as Consumption);
+        // check if this is an edit by comparing the before and after data.
+        // Also check if "before" does not exist to ensure it is a new consumption
+        if (snapshot.after.data()?.value == snapshot.before.data()?.value || !snapshot.before.data()) {
+          // simply add the consumption if it is not an edit
+          calculateConsumptionSummary(user, context, consumption as Consumption);
+        } else {
+          // Otherwise this is an edit and we remove the old consumption and add the new.
+          await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+          calculateConsumptionSummary(user, context, consumption as Consumption);
+        }
       } else {
         // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
         calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
@@ -192,7 +201,7 @@ async function calculateConsumption(
         carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
         energyExpended: consumption.value ?? undefined,
       };
-      if (consumptionData.carbonEmission && consumptionData.energyExpended) return consumptionData;
+      if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
         throw new Error(
           "Missing carbonEmission and/or energyExpended data for user " +
@@ -233,7 +242,7 @@ async function calculateConsumption(
         carbonEmission: (consumption.value / electricityData.householdSize) * electricityEF ?? undefined,
         energyExpended: consumption.value ?? undefined,
       };
-      if (consumptionData.carbonEmission && consumptionData.energyExpended) return consumptionData;
+      if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
         throw new Error(
           "Missing carbonEmission and/or energyExpended data for user " +
@@ -283,11 +292,11 @@ async function calculateConsumption(
           carbonEmission: transportationFactors.carbonEF,
           energyExpended: consumption.value * transportationFactors.energyEF,
         };
-      } else if (transportationFactors?.carbonEF && transportationFactors.energyEF) {
+      } else if (!isNaN(transportationFactors?.carbonEF) && !isNaN(transportationFactors?.energyEF)) {
         // For all other transportation types: Transport Emission Factor is in kg CO2 per km, so it is just multiplied with the value given in kilometer.
         return {
-          carbonEmission: consumption.value * transportationFactors.carbonEF,
-          energyExpended: consumption.value * transportationFactors.energyEF,
+          carbonEmission: consumption.value * transportationFactors?.carbonEF,
+          energyExpended: consumption.value * transportationFactors?.energyEF,
         };
       } else
         throw new Error(
