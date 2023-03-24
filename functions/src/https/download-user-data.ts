@@ -38,9 +38,14 @@ export const downloadUserData = functions
     const consumptions = (
       await admin.firestore().collection(FirestoreCollections.users.consumptions.path(context.auth.uid)).get()
     ).docs.map((doc) => doc.data());
+    // Retrieve consumption-summary data
+    const consumptionSummary = (
+      await admin.firestore().collection(FirestoreCollections.users.consumptionSummaries.path(context.auth.uid)).get()
+    ).docs.map((doc) => doc.data());
     // Return data
     return {
       user: user,
       consumptions: consumptions,
+      consumptionSummary: consumptionSummary,
     };
   });
