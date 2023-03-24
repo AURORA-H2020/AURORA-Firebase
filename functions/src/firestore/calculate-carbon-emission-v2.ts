@@ -71,18 +71,22 @@ export const calculateCarbonEmissionsBeta = functions
         .get()
         .then((snapshot) => {
           snapshot.forEach(async (singleConsumption) => {
-            const calculatedConsumptions = await calculateConsumption(
-              singleConsumption.data() as Consumption,
-              user,
-              context
-            );
-            if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
-              singleConsumption.ref.update({
-                carbonEmissions: calculatedConsumptions.carbonEmission,
-                energyExpended: calculatedConsumptions.energyExpended,
-                version: latestConsumptionVersion,
-                updatedAt: Timestamp.fromDate(new Date()),
-              });
+            try {
+              const calculatedConsumptions = await calculateConsumption(
+                singleConsumption.data() as Consumption,
+                user,
+                context
+              );
+              if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
+                singleConsumption.ref.update({
+                  carbonEmissions: calculatedConsumptions.carbonEmission,
+                  energyExpended: calculatedConsumptions.energyExpended,
+                  version: latestConsumptionVersion,
+                  updatedAt: Timestamp.fromDate(new Date()),
+                });
+              }
+            } catch (error) {
+              console.log(error)
             }
           });
         });

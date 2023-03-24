@@ -358,7 +358,7 @@ function calculateConsumptionLabel(
       carbonEmissionCategoryLabels.forEach((carbonEmissionLabel) => {
         if (
           carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
-          carbonEmissionLabel.minimum < categorySummary.carbonEmission.total &&
+          carbonEmissionLabel.minimum <= categorySummary.carbonEmission.total &&
           consumptionDaysCount > 0
         ) {
           categorySummary.carbonEmission.label = carbonEmissionLabel.label;
@@ -383,7 +383,7 @@ function calculateConsumptionLabel(
       energyExpendedCategoryLabels.forEach((energyExpendedLabel) => {
         if (
           energyExpendedLabel.maximum > categorySummary.energyExpended.total &&
-          energyExpendedLabel.minimum < categorySummary.energyExpended.total &&
+          energyExpendedLabel.minimum <= categorySummary.energyExpended.total &&
           consumptionDaysCount > 0
         ) {
           categorySummary.energyExpended.label = energyExpendedLabel.label;
@@ -602,16 +602,20 @@ export async function calculateConsumptionSummary(
       .get()
       .then((snapshot) => {
         snapshot.forEach((currentConsumption) => {
-          consumptionSummaryArray = updateConsumptionSummaryEntries(
-            currentConsumption.data() as Consumption,
-            countryLabels,
-            latestConsumptionSummaryVersion,
-            consumptionSummaryArray
-          );
+          try {
+            consumptionSummaryArray = updateConsumptionSummaryEntries(
+              currentConsumption.data() as Consumption,
+              countryLabels,
+              latestConsumptionSummaryVersion,
+              consumptionSummaryArray
+            );
+          } catch (error) {
+            console.log(error)
+          }
         });
       });
     if (consumptionSummaryArray.length > 0) {
-      // Write latest version to user after recalculating all consumptions
+      // Write latest version to user after recalculating full consumption summary
       await admin
         .firestore()
         .collection(FirestoreCollections.users.name)
