@@ -486,8 +486,8 @@ function consumptionDaysArray(
 ): { [day: number]: number } {
   let startDate = new Date(startDateTimestamp.seconds * 1000);
   let endDate = new Date(endDateTimestamp.seconds * 1000);
-  startDate = new Date(startDate.setHours(0, 0, 0, 0));
-  endDate = new Date(endDate.setHours(0, 0, 0, 0));
+  startDate = new Date(startDate.setUTCHours(0, 0, 0, 0));
+  endDate = new Date(endDate.setUTCHours(0, 0, 0, 0));
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
 
@@ -570,7 +570,7 @@ export async function calculateConsumptionSummary(
   }
 
   if (
-    latestConsumptionSummaryVersion == user.consumptionMeta?.version &&
+    latestConsumptionSummaryVersion == user.consumptionSummaryMeta?.version &&
     consumptionSummaryArray.length > 0 &&
     consumption &&
     !isXDaysAgo(user.consumptionSummaryMeta.lastRecalculation, 14)
@@ -641,16 +641,16 @@ export async function calculateConsumptionSummary(
 
   // Delete all documents in consumption-summary collection with an invalid overall label, meaning those without consumptions (e.g. after deleting associated consumptions)
   await admin
-  .firestore()
-  .collection(FirestoreCollections.users.name)
-  .doc(context.params.userId)
-  .collection(FirestoreCollections.users.consumptionSummaries.name)
-  .get()
-  .then((querySnapshot) => {
-    querySnapshot.docs.forEach((snapshot) => {
-      if (!snapshot.data().carbonEmission.label && !snapshot.data().energyExpended.label) {
-        snapshot.ref.delete();
-      }
+    .firestore()
+    .collection(FirestoreCollections.users.name)
+    .doc(context.params.userId)
+    .collection(FirestoreCollections.users.consumptionSummaries.name)
+    .get()
+    .then((querySnapshot) => {
+      querySnapshot.docs.forEach((snapshot) => {
+        if (!snapshot.data().carbonEmission.label && !snapshot.data().energyExpended.label) {
+          snapshot.ref.delete();
+        }
+      });
     });
-  });
 }
