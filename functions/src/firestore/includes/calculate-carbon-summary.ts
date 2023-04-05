@@ -501,9 +501,9 @@ function consumptionDaysArray(
   for (let year = startYear; year <= endYear; year++) {
     if (year != forYear) continue;
     let yearStart = new Date(year, 0, 1, 1);
-    yearStart = new Date(yearStart.setUTCHours(0,0,0,0))
+    yearStart = new Date(yearStart.setUTCHours(0, 0, 0, 0));
     let yearEnd = new Date(year + 1, 0, 1, 1);
-    yearEnd = new Date(yearEnd.setUTCHours(0,0,0,0))
+    yearEnd = new Date(yearEnd.setUTCHours(0, 0, 0, 0));
     const yearLength = Math.ceil((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
 
     for (let j = 0; j < yearLength; j++) {
@@ -585,6 +585,7 @@ export async function calculateConsumptionSummary(
       isDelete
     );
   } else {
+    consumptionSummaryArray = [];
     console.log(
       "Consumption summary version mismatch or outdated. Version was: " +
         user.consumptionSummaryMeta?.version +
