@@ -642,7 +642,10 @@ export async function calculateConsumptionSummary(
       .set(consumptionSummary);
   });
 
-  // Delete all documents in consumption-summary collection with an invalid overall label, meaning those without consumptions (e.g. after deleting associated consumptions)
+  // Delete all documents in consumption-summary collection not in the latest consumption summary (i.e. deleted or empty)
+
+  const validYears = consumptionSummaryArray?.map((a) => String(a.year));
+
   await admin
     .firestore()
     .collection(FirestoreCollections.users.name)
@@ -651,7 +654,7 @@ export async function calculateConsumptionSummary(
     .get()
     .then((querySnapshot) => {
       querySnapshot.docs.forEach((snapshot) => {
-        if (!snapshot.data().carbonEmission.label && !snapshot.data().energyExpended.label) {
+        if (!validYears?.includes(snapshot.id)) {
           snapshot.ref.delete();
         }
       });
