@@ -10,19 +10,15 @@ service cloud.firestore {
 
     // Access-Rules for countries collection and its subcollections
     match /countries/{countryId} {
-        // Allow Get if authenticated
-        allow get: if request.auth != null;
-        // Allow List if authenticated
-        allow list: if request.auth != null;
+        // Allow read if authenticated
+        allow read: if request.auth != null;
         // Deny Write (Create, Update, Delete)
         allow write: if false;
 
         // Access-Rules for cities subcollection
         match /cities/{cityId} {
-          // Allow Get if authenticated
-          allow get: if request.auth != null;
-          // Allow List if authenticated
-          allow list: if request.auth != null;
+          // Allow read if authenticated
+          allow read: if request.auth != null;
           // Deny Write (Create, Update, Delete)
           allow write: if false;
         }
@@ -37,9 +33,7 @@ service cloud.firestore {
         // Allow Create if auth uid matches with the userId
         allow create: if request.auth.uid == userId;
         // Allow Update if auth uid matches with the userId
-        // and the consumptionSummary field hasn't been updated
-        allow update: if request.auth.uid == userId
-            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['consumptionSummary']);
+        allow update: if request.auth.uid == userId;
         // Deny delete as an user documents exclusively gets deleted by a cloud function
         allow delete: if false;
 
@@ -47,12 +41,16 @@ service cloud.firestore {
         match /consumptions/{consumptionID} {
           // Allow read if auth uid matches with the userId
           allow read: if request.auth.uid == userId;
-          // Allow create if auth uid matches with the userId
-          allow create: if request.auth.uid == userId;
-          // Deny update
-          allow update: if false;
-          // Allow delete if auth uid matches with the userId
-          allow delete: if request.auth.uid == userId;
+          // Allow write if auth uid matches with the userId
+          allow write: if request.auth.uid == userId;
+        }
+
+        // Access-Rules for consumption-summaries subcollection
+        match /consumption-summaries/{consumptionSummaryID} {
+          // Allow read if auth uid matches with the userId
+          allow read: if request.auth.uid == userId;
+          // Deny write
+          allow write: if false
         }
     }
 

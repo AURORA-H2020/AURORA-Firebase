@@ -78,14 +78,6 @@ describe("Firestore Security Rules", () => {
         assertSucceeds(
           authenticatedContext.firestore().collection("users").doc(authenticatedContextUserId).update({})
         ));
-      it("Deny to update a user if auth uid matches but consumptionSummary has been changed", () =>
-        assertFails(
-          authenticatedContext
-            .firestore()
-            .collection("users")
-            .doc(authenticatedContextUserId)
-            .update({ consumptionSummary: {} })
-        ));
       it("Deny to update a user if auth uid not matches", () =>
         assertFails(authenticatedContext.firestore().collection("users").doc("1").update({})));
       it("Deny to delete a user", () =>
@@ -104,8 +96,17 @@ describe("Firestore Security Rules", () => {
             .collection("consumptions")
             .add({})
         ));
-      it("Deny to update a consumption", () =>
-        assertFails(
+      it("Allow to update a consumption", async () => {
+        await testEnvironment.withSecurityRulesDisabled((context) =>
+          context
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("consumptions")
+            .doc("1")
+            .set({})
+        );
+        await assertSucceeds(
           authenticatedContext
             .firestore()
             .collection("users")
@@ -113,7 +114,8 @@ describe("Firestore Security Rules", () => {
             .collection("consumptions")
             .doc("1")
             .update({})
-        ));
+        );
+      });
       it("Allow to delete a consumption if auth uid matches", () =>
         assertSucceeds(
           authenticatedContext
