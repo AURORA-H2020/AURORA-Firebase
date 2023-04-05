@@ -627,19 +627,6 @@ export async function calculateConsumptionSummary(
           },
         });
     }
-
-    // Also delete all documents in consumption-summary collection
-    await admin
-      .firestore()
-      .collection(FirestoreCollections.users.name)
-      .doc(context.params.userId)
-      .collection(FirestoreCollections.users.consumptionSummaries.name)
-      .get()
-      .then((querySnapshot) => {
-        querySnapshot.docs.forEach((snapshot) => {
-          snapshot.ref.delete();
-        });
-      });
   }
 
   consumptionSummaryArray?.forEach(async (consumptionSummary) => {
@@ -650,5 +637,20 @@ export async function calculateConsumptionSummary(
       .collection(FirestoreCollections.users.consumptionSummaries.name)
       .doc(String(consumptionSummary.year))
       .set(consumptionSummary);
+  });
+
+  // Delete all documents in consumption-summary collection with an invalid overall label, meaning those without consumptions (e.g. after deleting associated consumptions)
+  await admin
+  .firestore()
+  .collection(FirestoreCollections.users.name)
+  .doc(context.params.userId)
+  .collection(FirestoreCollections.users.consumptionSummaries.name)
+  .get()
+  .then((querySnapshot) => {
+    querySnapshot.docs.forEach((snapshot) => {
+      if (!snapshot.data().carbonEmission.label && !snapshot.data().energyExpended.label) {
+        snapshot.ref.delete();
+      }
+    });
   });
 }

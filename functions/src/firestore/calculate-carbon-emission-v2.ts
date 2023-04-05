@@ -43,10 +43,6 @@ export const calculateCarbonEmissionsBeta = functions
         )
           isEdit = true;
       } else {
-        console.log("BEFORE");
-        console.log(JSON.stringify(snapshot.after.data()?.[category]));
-        console.log("AFTER");
-        console.log(JSON.stringify(snapshot.before.data()?.[category]));
         if (JSON.stringify(snapshot.after.data()?.[category]) != JSON.stringify(snapshot.before.data()?.[category]))
           isEdit = true;
       }
@@ -59,7 +55,6 @@ export const calculateCarbonEmissionsBeta = functions
         isEdit = true;
       }
     }
-    console.log("isEdit:", isEdit);
 
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
@@ -160,9 +155,7 @@ export const calculateCarbonEmissionsBeta = functions
           calculateConsumptionSummary(user, context, consumption as Consumption);
         } else {
           // Otherwise this is an edit and we remove the old consumption and add the new.
-          console.log(snapshot.before.data());
           await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
-          console.log(consumption);
           await calculateConsumptionSummary(user, context, consumption as Consumption);
         }
       } else {
