@@ -501,7 +501,7 @@ function consumptionDaysArray(
   for (let year = startYear; year <= endYear; year++) {
     if (year != forYear) continue;
     const yearStart = new Date(year, 0, 1, 1);
-    const yearEnd = new Date(year + 1, 0, 1);
+    const yearEnd = new Date(year + 1, 0, 1, 1);
     const yearLength = Math.ceil((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
 
     for (let j = 0; j < yearLength; j++) {
