@@ -500,13 +500,16 @@ function consumptionDaysArray(
 
   for (let year = startYear; year <= endYear; year++) {
     if (year != forYear) continue;
-    const yearStart = new Date(year, 0, 1, 1);
-    const yearEnd = new Date(year + 1, 0, 1, 1);
+    let yearStart = new Date(year, 0, 1, 1);
+    yearStart = new Date(yearStart.setUTCHours(0,0,0,0))
+    let yearEnd = new Date(year + 1, 0, 1, 1);
+    yearEnd = new Date(yearEnd.setUTCHours(0,0,0,0))
     const yearLength = Math.ceil((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
 
     for (let j = 0; j < yearLength; j++) {
       if (!arr[j]) arr[j] = 0;
       const currentDate = new Date(yearStart.getTime() + j * 24 * 60 * 60 * 1000);
+      console.log(currentDate, " Start: ", startDate, "End: ", endDate)
       if (currentDate >= startDate && currentDate <= endDate) {
         arr[j] += countValue;
       } else {
