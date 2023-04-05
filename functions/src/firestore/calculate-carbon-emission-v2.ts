@@ -150,7 +150,9 @@ export const calculateCarbonEmissionsBeta = functions
           calculateConsumptionSummary(user, context, consumption as Consumption);
         } else {
           // Otherwise this is an edit and we remove the old consumption and add the new.
+          console.log(snapshot.before.data())
           await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+          console.log(consumption)
           await calculateConsumptionSummary(user, context, consumption as Consumption);
         }
       } else {
