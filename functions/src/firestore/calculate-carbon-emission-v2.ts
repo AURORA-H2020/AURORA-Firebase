@@ -153,7 +153,7 @@ export const calculateCarbonEmissionsBeta = functions
         // check if this is an edit
         if (!isEdit) {
           // simply add the consumption if it is not an edit
-          calculateConsumptionSummary(user, context, consumption as Consumption);
+          await calculateConsumptionSummary(user, context, consumption as Consumption);
         } else {
           // Otherwise this is an edit and we recalculate all consumptions. TODO: Improve this so recalculation isnt required by removing the old consumption and adding the new.
           await calculateConsumptionSummary(user, context);
@@ -164,7 +164,7 @@ export const calculateCarbonEmissionsBeta = functions
         }
       } else {
         // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
-        calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+        await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
       }
     }
   });
