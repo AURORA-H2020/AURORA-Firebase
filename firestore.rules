@@ -47,12 +47,16 @@ service cloud.firestore {
         match /consumptions/{consumptionID} {
           // Allow read if auth uid matches with the userId
           allow read: if request.auth.uid == userId;
-          // Allow create if auth uid matches with the userId
-          allow create: if request.auth.uid == userId;
-          // Deny update
-          allow update: if false;
-          // Allow delete if auth uid matches with the userId
-          allow delete: if request.auth.uid == userId;
+          // Allow write if auth uid matches with the userId
+          allow write: if request.auth.uid == userId;
+        }
+
+        // Access-Rules for consumption-summaries subcollection
+        match /consumption-summaries/{consumptionSummaryID} {
+          // Allow read if auth uid matches with the userId
+          allow read: if request.auth.uid == userId;
+          // Deny write
+          allow write: if false
         }
     }
 
