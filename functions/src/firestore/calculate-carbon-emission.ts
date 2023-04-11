@@ -26,8 +26,15 @@ export const calculateCarbonEmissions = functions
     )
   )
   .onWrite(async (snapshot, context) => {
+    /*
     const forbiddenUsers = ["uw6h1wRVOvbEg4xKW2lx6nFqueA3","lMr1nduvX6VAj59jBUnkMDMqFFs2"]
     if (forbiddenUsers.includes(context.params.userId)) {
+      return
+    }
+    */
+
+    const disableFunction = true
+    if (disableFunction) {
       return
     }
     // Calculate carbon emissions

@@ -26,10 +26,12 @@ export const calculateCarbonEmissionsBeta = functions
     )
   )
   .onWrite(async (snapshot, context) => {
+    /*
     const allowedUsers = ["uw6h1wRVOvbEg4xKW2lx6nFqueA3", "lMr1nduvX6VAj59jBUnkMDMqFFs2"];
     if (!allowedUsers.includes(context.params.userId)) {
       return;
     }
+    */
 
     let isEdit = false;
     // check if this is a reinvocation and exit function if it is
