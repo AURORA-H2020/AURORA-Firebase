@@ -95,7 +95,10 @@ export const calculateCarbonEmissionsBeta = functions
                 user,
                 context
               );
-              if (calculatedConsumptions?.carbonEmission && calculatedConsumptions.energyExpended) {
+              if (
+                (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
+                (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
+              ) {
                 singleConsumption.ref.update({
                   carbonEmissions: calculatedConsumptions.carbonEmission,
                   energyExpended: calculatedConsumptions.energyExpended,
@@ -125,17 +128,20 @@ export const calculateCarbonEmissionsBeta = functions
       // Check if document still exists. No calculation necessary if it has been deleted
       if (snapshot.after.exists) {
         // Calculate carbon emissions
-        const calculatedConsumption = await calculateConsumption(snapshot.after.data() as Consumption, user, context);
+        const calculatedConsumptions = await calculateConsumption(snapshot.after.data() as Consumption, user, context);
         // Check if carbon emissions are available
-        if (calculatedConsumption?.carbonEmission && calculatedConsumption.energyExpended) {
+        if (
+          (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
+          (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
+        ) {
           // Update consumption and set calculated carbon emissions
           await admin
             .firestore()
             .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
             .doc(context.params.consumptionId)
             .update({
-              carbonEmissions: calculatedConsumption.carbonEmission,
-              energyExpended: calculatedConsumption.energyExpended,
+              carbonEmissions: calculatedConsumptions.carbonEmission,
+              energyExpended: calculatedConsumptions.energyExpended,
               version: latestConsumptionVersion,
               updatedAt: Timestamp.fromDate(new Date()),
             });
@@ -221,7 +227,6 @@ async function calculateConsumption(
         carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
         energyExpended: consumption.value ?? undefined,
       };
-      console.log(consumptionData)
       if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
         throw new Error(
