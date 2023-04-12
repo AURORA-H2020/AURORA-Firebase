@@ -198,7 +198,7 @@ async function calculateConsumption(
     case "heating": {
       const heatingData = consumption.heating;
       if (!heatingData) {
-        // Log error and exit if electricity data does not exist
+        // Log error and exit if heating data does not exist
         throw new Error(
           "Heating data does not exist on User: " +
             context.params.userId +
@@ -221,6 +221,7 @@ async function calculateConsumption(
         carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
         energyExpended: consumption.value ?? undefined,
       };
+      console.log(consumptionData)
       if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
         throw new Error(
