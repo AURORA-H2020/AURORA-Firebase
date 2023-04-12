@@ -26,9 +26,12 @@ export const calculateCarbonEmissionsBeta = functions
     )
   )
   .onWrite(async (snapshot, context) => {
-    if (context.params.userId != "uw6h1wRVOvbEg4xKW2lx6nFqueA3") {
+    /*
+    const allowedUsers = ["uw6h1wRVOvbEg4xKW2lx6nFqueA3", "lMr1nduvX6VAj59jBUnkMDMqFFs2"];
+    if (!allowedUsers.includes(context.params.userId)) {
       return;
     }
+    */
 
     let isEdit = false;
     // check if this is a reinvocation and exit function if it is
@@ -152,15 +155,18 @@ export const calculateCarbonEmissionsBeta = functions
         // check if this is an edit
         if (!isEdit) {
           // simply add the consumption if it is not an edit
-          calculateConsumptionSummary(user, context, consumption as Consumption);
+          await calculateConsumptionSummary(user, context, consumption as Consumption);
         } else {
-          // Otherwise this is an edit and we remove the old consumption and add the new.
+          // Otherwise this is an edit and we recalculate all consumptions. TODO: Improve this so recalculation isnt required by removing the old consumption and adding the new.
+          await calculateConsumptionSummary(user, context);
+          /*
           await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
           await calculateConsumptionSummary(user, context, consumption as Consumption);
+          */
         }
       } else {
         // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
-        calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+        await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
       }
     }
   });

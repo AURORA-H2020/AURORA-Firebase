@@ -486,8 +486,8 @@ function consumptionDaysArray(
 ): { [day: number]: number } {
   let startDate = new Date(startDateTimestamp.seconds * 1000);
   let endDate = new Date(endDateTimestamp.seconds * 1000);
-  startDate = new Date(startDate.setHours(0, 0, 0, 0));
-  endDate = new Date(endDate.setHours(0, 0, 0, 0));
+  startDate = new Date(startDate.setUTCHours(0, 0, 0, 0));
+  endDate = new Date(endDate.setUTCHours(0, 0, 0, 0));
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
 
@@ -500,9 +500,11 @@ function consumptionDaysArray(
 
   for (let year = startYear; year <= endYear; year++) {
     if (year != forYear) continue;
-    const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year + 1, 0, 0);
-    const yearLength = Math.ceil((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    let yearStart = new Date(year, 0, 1, 1);
+    yearStart = new Date(yearStart.setUTCHours(0, 0, 0, 0));
+    let yearEnd = new Date(year + 1, 0, 1, 1);
+    yearEnd = new Date(yearEnd.setUTCHours(0, 0, 0, 0));
+    const yearLength = Math.ceil((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
 
     for (let j = 0; j < yearLength; j++) {
       if (!arr[j]) arr[j] = 0;
@@ -570,7 +572,7 @@ export async function calculateConsumptionSummary(
   }
 
   if (
-    latestConsumptionSummaryVersion == user.consumptionMeta?.version &&
+    latestConsumptionSummaryVersion == user.consumptionSummaryMeta?.version &&
     consumptionSummaryArray.length > 0 &&
     consumption &&
     !isXDaysAgo(user.consumptionSummaryMeta.lastRecalculation, 14)
@@ -583,6 +585,7 @@ export async function calculateConsumptionSummary(
       isDelete
     );
   } else {
+    consumptionSummaryArray = [];
     console.log(
       "Consumption summary version mismatch or outdated. Version was: " +
         user.consumptionSummaryMeta?.version +
@@ -639,18 +642,21 @@ export async function calculateConsumptionSummary(
       .set(consumptionSummary);
   });
 
-  // Delete all documents in consumption-summary collection with an invalid overall label, meaning those without consumptions (e.g. after deleting associated consumptions)
+  // Delete all documents in consumption-summary collection not in the latest consumption summary (i.e. deleted or empty)
+
+  const validYears = consumptionSummaryArray?.map((a) => String(a.year));
+
   await admin
-  .firestore()
-  .collection(FirestoreCollections.users.name)
-  .doc(context.params.userId)
-  .collection(FirestoreCollections.users.consumptionSummaries.name)
-  .get()
-  .then((querySnapshot) => {
-    querySnapshot.docs.forEach((snapshot) => {
-      if (!snapshot.data().carbonEmission.label && !snapshot.data().energyExpended.label) {
-        snapshot.ref.delete();
-      }
+    .firestore()
+    .collection(FirestoreCollections.users.name)
+    .doc(context.params.userId)
+    .collection(FirestoreCollections.users.consumptionSummaries.name)
+    .get()
+    .then((querySnapshot) => {
+      querySnapshot.docs.forEach((snapshot) => {
+        if (!validYears?.includes(snapshot.id)) {
+          snapshot.ref.delete();
+        }
+      });
     });
-  });
 }
