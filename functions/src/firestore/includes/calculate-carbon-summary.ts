@@ -91,7 +91,7 @@ function updateConsumptionSummaryEntries(
   let energyExpendedValue = consumption.energyExpended;
 
   // Only proceed if both values are not undefined
-  if (carbonEmissionValue && energyExpendedValue) {
+  if ((carbonEmissionValue || carbonEmissionValue === 0) && (energyExpendedValue || energyExpendedValue === 0)) {
     // reverse values if this is a delete action
     if (isDelete) {
       carbonEmissionValue *= -1;
