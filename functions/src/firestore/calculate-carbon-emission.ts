@@ -6,9 +6,9 @@ import { Timestamp } from "firebase-admin/firestore";
 import { FirestoreCollections } from "../utils/firestore-collections";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
-import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import { CountryMetric } from "../models/country/metric/country-metric";
-// import { firestore } from "firebase-admin";
+import { calculateConsumptionSummary } from "./includes/calculate-carbon-summary";
+import { ConsumptionCategory } from "../models/consumption/consumption-category";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -27,37 +27,156 @@ export const calculateCarbonEmissions = functions
   )
   .onWrite(async (snapshot, context) => {
     /*
-    const forbiddenUsers = ["uw6h1wRVOvbEg4xKW2lx6nFqueA3","lMr1nduvX6VAj59jBUnkMDMqFFs2"]
-    if (forbiddenUsers.includes(context.params.userId)) {
-      return
+    const allowedUsers = ["uw6h1wRVOvbEg4xKW2lx6nFqueA3", "lMr1nduvX6VAj59jBUnkMDMqFFs2"];
+    if (!allowedUsers.includes(context.params.userId)) {
+      return;
     }
     */
 
-    const disableFunction = true
-    if (disableFunction) {
-      return
+    let isEdit = false;
+    // check if this is a reinvocation and exit function if it is
+    // check that document has not been deleted.
+    if (snapshot.after.exists && snapshot.before.exists) {
+      // check if the user entered data hasn't changed (no edit)
+      const category: ConsumptionCategory = snapshot.after.data()?.category;
+      if (category == "transportation") {
+        if (
+          JSON.stringify(snapshot.after.data()?.transportation) !=
+          JSON.stringify(snapshot.before.data()?.transportation)
+        )
+          isEdit = true;
+      } else {
+        if (JSON.stringify(snapshot.after.data()?.[category]) != JSON.stringify(snapshot.before.data()?.[category]))
+          isEdit = true;
+      }
+      if (snapshot.after.data()?.value == snapshot.before.data()?.value && !isEdit) {
+        // check whether the energy and carbon calculated properties exist
+        if (
+          (snapshot.after.data()?.energyExpended || snapshot.after.data()?.energyExpended === 0) &&
+          (snapshot.after.data()?.carbonEmissions || snapshot.after.data()?.carbonEmissions === 0)
+        ) {
+          return; // exit function without doing anything
+        }
+      } else if (snapshot.after.data()?.value != snapshot.before.data()?.value) {
+        isEdit = true;
+      }
     }
-    // Calculate carbon emissions
-    const calculatedCarbonEmissions = await carbonEmissions(snapshot, context);
-    // Check if carbon emissions are available
-    if (calculatedCarbonEmissions) {
-      // Update consumption and set calculated carbon emissions
-      await admin
-        .firestore()
-        .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
-        .doc(context.params.consumptionId)
-        .update({ carbonEmissions: calculatedCarbonEmissions });
+
+    // Retrieve the user from the users collection by using the "userId" parameter from the path
+    const user = (
+      await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
+    ).data() as User;
+    if (!user) {
+      throw new Error("User not found");
     }
-    // Calculate consumption summary
-    const calculatedConsumptionSummary = await consumptionSummary(snapshot, context);
-    // Check if consumption summary is available
-    if (calculatedConsumptionSummary) {
-      // Update consumption summary
+
+    // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all consumptions on next data entry.
+    const latestConsumptionVersion = "1.0.0";
+
+    // Check if consumptionVersion matches with latest, else recalculate all consumptions
+    if (!user.consumptionMeta || user.consumptionMeta?.version != latestConsumptionVersion) {
+      console.log(
+        "Consumption version mismatch. Was: " +
+          user.consumptionMeta?.version +
+          " | Expected: " +
+          latestConsumptionVersion +
+          "  Recalculating consumptions for user: " +
+          context.params.userId
+      );
       await admin
         .firestore()
         .collection(FirestoreCollections.users.name)
         .doc(context.params.userId)
-        .update({ consumptionSummary: calculatedConsumptionSummary });
+        .collection(FirestoreCollections.users.consumptions.name)
+        .orderBy("createdAt", "desc")
+        .get()
+        .then((snapshot) => {
+          snapshot.forEach(async (singleConsumption) => {
+            try {
+              const calculatedConsumptions = await calculateConsumption(
+                singleConsumption.data() as Consumption,
+                user,
+                context
+              );
+              if (
+                (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
+                (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
+              ) {
+                singleConsumption.ref.update({
+                  carbonEmissions: calculatedConsumptions.carbonEmission,
+                  energyExpended: calculatedConsumptions.energyExpended,
+                  version: latestConsumptionVersion,
+                  updatedAt: Timestamp.fromDate(new Date()),
+                });
+              }
+            } catch (error) {
+              console.log(error);
+            }
+          });
+        });
+      // Write latest version to user after recalculating all consumptions
+      await admin
+        .firestore()
+        .collection(FirestoreCollections.users.name)
+        .doc(context.params.userId)
+        .update({
+          consumptionMeta: {
+            version: latestConsumptionVersion,
+            lastRecalculation: Timestamp.fromDate(new Date()),
+          },
+        });
+      // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
+      await calculateConsumptionSummary(user, context);
+    } else {
+      // Check if document still exists. No calculation necessary if it has been deleted
+      if (snapshot.after.exists) {
+        // Calculate carbon emissions
+        const calculatedConsumptions = await calculateConsumption(snapshot.after.data() as Consumption, user, context);
+        // Check if carbon emissions are available
+        if (
+          (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
+          (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
+        ) {
+          // Update consumption and set calculated carbon emissions
+          await admin
+            .firestore()
+            .collection(FirestoreCollections.users.consumptions.path(context.params.userId))
+            .doc(context.params.consumptionId)
+            .update({
+              carbonEmissions: calculatedConsumptions.carbonEmission,
+              energyExpended: calculatedConsumptions.energyExpended,
+              version: latestConsumptionVersion,
+              updatedAt: Timestamp.fromDate(new Date()),
+            });
+        }
+
+        // get consumption again from firestore, as it has been updated with calculated consumptions
+        const consumption = (
+          await admin
+            .firestore()
+            .collection(FirestoreCollections.users.name)
+            .doc(context.params.userId)
+            .collection(FirestoreCollections.users.consumptions.name)
+            .doc(context.params.consumptionId)
+            .get()
+        ).data();
+
+        // check if this is an edit
+        if (!isEdit) {
+          // simply add the consumption if it is not an edit
+          await calculateConsumptionSummary(user, context, consumption as Consumption);
+        } else {
+          // Otherwise this is an edit and we recalculate all consumptions. TODO: Improve this so recalculation isnt required by removing the old consumption and adding the new.
+          await calculateConsumptionSummary(user, context);
+          /*
+          await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+          await calculateConsumptionSummary(user, context, consumption as Consumption);
+          */
+        }
+      } else {
+        // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
+        await calculateConsumptionSummary(user, context, snapshot.before.data() as Consumption, true);
+      }
     }
   });
 
@@ -66,45 +185,19 @@ export const calculateCarbonEmissions = functions
  * @param snapshot The document snapshot.
  * @param context The event context.
  */
-async function carbonEmissions(
-  snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
+async function calculateConsumption(
+  consumption: Consumption,
+  user: User,
   context: functions.EventContext<Record<string, string>>
-): Promise<number | undefined> {
-  // Check if document has been deleted
-  if (!snapshot.after.exists) {
-    // Return undefined as document has been deleted
-    // and therefore a calculation is not needed
-    return undefined;
-  }
-
-  // First retrieve the user from the users collection by using the "userId" parameter from the path
-  const user = (
-    await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
-  ).data() as User;
-  if (!user) {
-    throw new Error("User not found");
-  }
-
+): Promise<{ carbonEmission: number; energyExpended: number } | undefined> {
   // Country to fall back to in case returned EF value is not a number
   const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
-
-  const consumption = snapshot.after.data() as Consumption;
-  if (!consumption) {
-    return undefined;
-  }
 
   // Get date of consumption: startDate for periodic consumptions and dateOfTravel for transportation
   const consumptionDate: Timestamp | undefined =
     consumption.electricity?.startDate ?? consumption.heating?.startDate ?? consumption.transportation?.dateOfTravel;
   if (!consumptionDate) {
-    console.log("Consumption Date is missing");
-    return undefined;
-  }
-
-  // Check if carbon emissions are available on a consumption
-  if (consumption.carbonEmissions) {
-    // Return undefined as calculating the carbon emissions is not needed
-    return undefined;
+    throw new Error("Consumption Date is missing");
   }
 
   switch (consumption.category) {
@@ -114,14 +207,13 @@ async function carbonEmissions(
     case "heating": {
       const heatingData = consumption.heating;
       if (!heatingData) {
-        // Log error and exit if electricity data does not exist
-        console.log(
-          "Heating data does not exist on User: ",
-          context.params.userId,
-          " | Consumption: ",
-          context.params.consumptionId
+        // Log error and exit if heating data does not exist
+        throw new Error(
+          "Heating data does not exist on User: " +
+            context.params.userId +
+            " | Consumption: " +
+            context.params.consumptionId
         );
-        return undefined;
       }
 
       let metrics = await getMetrics(user.country, consumptionDate);
@@ -132,8 +224,21 @@ async function carbonEmissions(
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
-      // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
-      return (consumption.value / heatingData.householdSize) * heatingEF ?? undefined;
+
+      const consumptionData = {
+        // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
+        carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
+        energyExpended: consumption.value ?? undefined,
+      };
+      if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
+      else
+        throw new Error(
+          "Missing carbonEmission and/or energyExpended data for user " +
+            context.params.userId +
+            " on entering consumption " +
+            context.params.consumptionId +
+            "[heating]"
+        );
     }
 
     /**
@@ -144,26 +249,37 @@ async function carbonEmissions(
 
       if (!electricityData) {
         // Log error and exit if electricity data does not exist
-        console.log(
-          "Electricity data does not exist on User: ",
-          context.params.userId,
-          " | Consumption: ",
-          context.params.consumptionId
+        throw new Error(
+          "Electricity data does not exist on User: " +
+            context.params.userId +
+            " | Consumption: " +
+            context.params.consumptionId
         );
-        return undefined;
       }
 
       let metrics = await getMetrics(user.country, consumptionDate);
       let electricityEF = getElectricityEF(electricityData, metrics);
 
-      // Fallback in case electricityEF is NaN
+      // Fallback in case electricityEF is not a Number
       if (!electricityEF) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
       }
 
-      // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
-      return (consumption.value / electricityData.householdSize) * electricityEF ?? undefined;
+      const consumptionData = {
+        // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
+        carbonEmission: (consumption.value / electricityData.householdSize) * electricityEF ?? undefined,
+        energyExpended: consumption.value ?? undefined,
+      };
+      if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
+      else
+        throw new Error(
+          "Missing carbonEmission and/or energyExpended data for user " +
+            context.params.userId +
+            " on entering consumption " +
+            context.params.consumptionId +
+            "[electricity]"
+        );
     }
 
     /**
@@ -173,33 +289,52 @@ async function carbonEmissions(
       const transportationData = consumption.transportation;
       if (!transportationData) {
         // Log error and exit if transportation data does not exist
-        console.log(
-          "Transportation data does not exist on User: ",
-          context.params.userId,
-          " | Consumption: ",
-          context.params.consumptionId
+        throw new Error(
+          "Transportation data does not exist on User: " +
+            context.params.userId +
+            " | Consumption: " +
+            context.params.consumptionId
         );
-        return undefined;
       }
 
       let metrics = await getMetrics(user.country, consumptionDate);
-      let transportationEF = getTransportationEF(transportationData, metrics);
+      let transportationFactors = getTransportationEF(transportationData, metrics);
 
       // Fallback in case transportationEF is not a Number
-      if (!transportationEF) {
+      if (!transportationFactors) {
         metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
-        transportationEF = getTransportationEF(transportationData, metrics);
+        transportationFactors = getTransportationEF(transportationData, metrics);
       }
 
-      if (transportationData.transportationType === "plane" && transportationEF) {
+      if (
+        transportationData.transportationType === "plane" &&
+        transportationFactors?.carbonEF &&
+        transportationFactors.energyEF
+      ) {
         // Only if transportation type is "plane", return just the Emission Factor, as it is constant per capita
-        return transportationEF;
-      } else if (transportationEF === 0) {
-        return 0;
-      } else {
+        return {
+          carbonEmission: transportationFactors.carbonEF,
+          energyExpended: transportationFactors.energyEF,
+        };
+      } else if (transportationFactors?.carbonEF === 0 && transportationFactors.energyEF) {
+        return {
+          carbonEmission: transportationFactors.carbonEF,
+          energyExpended: consumption.value * transportationFactors.energyEF,
+        };
+      } else if (!isNaN(transportationFactors?.carbonEF) && !isNaN(transportationFactors?.energyEF)) {
         // For all other transportation types: Transport Emission Factor is in kg CO2 per km, so it is just multiplied with the value given in kilometer.
-        return consumption.value * transportationEF ?? undefined;
-      }
+        return {
+          carbonEmission: consumption.value * transportationFactors?.carbonEF,
+          energyExpended: consumption.value * transportationFactors?.energyEF,
+        };
+      } else
+        throw new Error(
+          "Missing carbonEmission and/or energyExpended data for user " +
+            context.params.userId +
+            " on entering consumption " +
+            context.params.consumptionId +
+            "[transportation]"
+        );
     }
   }
 }
@@ -211,9 +346,7 @@ async function carbonEmissions(
  * @param metrics Document Data containing all EF values (metrics).
  */
 function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firestore.DocumentData) {
-  if (!heatingData) {
-    return undefined;
-  }
+  if (!heatingData) throw new Error("Could not get heating metric in 'getHeatingEF'");
 
   const heatingFuel = heatingData.heatingFuel;
   switch (heatingFuel) {
@@ -253,9 +386,7 @@ function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firest
  * @param metrics Document Data containing all EF values (metrics).
  */
 function getElectricityEF(electricityData: Consumption["electricity"], metrics: admin.firestore.DocumentData) {
-  if (!metrics.electricity) {
-    return undefined;
-  }
+  if (!metrics.electricity.default) throw new Error("Could not get electricity metric in 'getElectricityEF'");
   return metrics.electricity.default;
 }
 
@@ -266,19 +397,20 @@ function getElectricityEF(electricityData: Consumption["electricity"], metrics: 
  * @param metrics Document Data containing all EF values (metrics).
  */
 function getTransportationEF(transportationData: Consumption["transportation"], metrics: admin.firestore.DocumentData) {
-  if (!transportationData) {
-    return undefined;
-  }
+  if (!transportationData) throw new Error("Could not get transportation metric in 'getTransportationEF'");
 
   const transportationType = transportationData?.transportationType;
   const publicVehicleOccupancy = transportationData?.publicVehicleOccupancy;
   if (
     publicVehicleOccupancy &&
     transportationType &&
-    metrics.transportation &&
-    transportationType in metrics.transportation
+    transportationType in metrics.transportation &&
+    transportationType in metrics.transportationEnergy
   ) {
-    return metrics.transportation[transportationType][publicVehicleOccupancy];
+    return {
+      carbonEF: metrics.transportation[transportationType][publicVehicleOccupancy],
+      energyEF: metrics.transportationEnergy[transportationType][publicVehicleOccupancy],
+    };
   } else {
     let privateVehicleOccupancy = transportationData.privateVehicleOccupancy;
     if (!privateVehicleOccupancy) {
@@ -290,8 +422,11 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
         privateVehicleOccupancy = 5;
       }
     }
-    if (metrics.transportation && transportationType in metrics.transportation) {
-      return metrics.transportation[transportationType][String(privateVehicleOccupancy)];
+    if (transportationType in metrics.transportation && transportationType in metrics.transportationEnergy) {
+      return {
+        carbonEF: metrics.transportation[transportationType][String(privateVehicleOccupancy)],
+        energyEF: metrics.transportationEnergy[transportationType][String(privateVehicleOccupancy)],
+      };
     } else {
       return undefined;
     }
@@ -299,7 +434,7 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
 }
 
 /**
- * [getMetric]
+ * [getMetrics]
  * Function to get relevant metrics based on:
  * @param countryID ID of the associated country.
  * @param consumptionDate Timestamp of the consumption occurance to get the most viable metric version.
@@ -318,143 +453,11 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp | undefi
       if (!querySnapshot.empty) {
         return querySnapshot.docs[0].data();
       } else {
-        return null;
-      } // TODO: add standard EU metrics as fallback?
+        return undefined;
+      }
     })) as CountryMetric;
   if (!metrics) {
     throw new Error("Country not found");
   }
   return metrics;
 }
-
-/**
- * Calculate ConsumptionSummary
- * @param snapshot The document snapshot.
- * @param context The event context.
- */
-async function consumptionSummary(
-  snapshot: functions.Change<functions.firestore.DocumentSnapshot>,
-  context: functions.EventContext<Record<string, string>>
-): Promise<ConsumptionSummary | undefined> {
-  let consumptionCarbonEmissions: number;
-  let consumptionCategory: string;
-
-  if (!snapshot.after.exists) {
-    // If action is delete, get emission value before and make negative
-    consumptionCarbonEmissions = snapshot.before.data()?.carbonEmissions;
-    consumptionCarbonEmissions *= -1;
-    consumptionCategory = snapshot.before.data()?.category;
-  } else {
-    consumptionCarbonEmissions = snapshot.after.data()?.carbonEmissions;
-    consumptionCategory = snapshot.after.data()?.category;
-  }
-
-  if (!consumptionCarbonEmissions) {
-    // Return undefined if there is no carbon emission to run calculations with
-    return undefined;
-  }
-
-  const user = (
-    await admin.firestore().collection(FirestoreCollections.users.name).doc(context.params.userId).get()
-  ).data() as User;
-
-  let consumptionSummary: ConsumptionSummary | undefined;
-
-  // Create new empty consumption summary if it does not already exist
-  if (!user.consumptionSummary) {
-    consumptionSummary = newConsumptionSummary();
-  } else {
-    consumptionSummary = user.consumptionSummary;
-  }
-
-  // Find the list index of consumptionSummary for the current consumptionCategory
-  const consumptionCategorySummaryID = consumptionSummary.entries.findIndex(
-    ({ category }) => category === consumptionCategory
-  );
-
-  // Update consumptionCategory by adding new consumptionValue
-  if (consumptionSummary.entries[consumptionCategorySummaryID].absoluteValue) {
-    consumptionSummary.entries[consumptionCategorySummaryID].absoluteValue += consumptionCarbonEmissions;
-  } else {
-    consumptionSummary.entries[consumptionCategorySummaryID].absoluteValue = consumptionCarbonEmissions;
-    // TODO: Should there be a NaN value in a consumption Category Summary, all consumptions need to be summed individually.
-  }
-
-  // Sum all carbon emission values in consumption summary
-  let totalCarbonEmissions = 0;
-  consumptionSummary.entries.forEach((item) => {
-    totalCarbonEmissions += item.absoluteValue;
-  });
-
-  // Calculate percentages for carbon emission categories
-  if (totalCarbonEmissions && totalCarbonEmissions > 0) {
-    consumptionSummary.entries.forEach((item) => {
-      item.value = item.absoluteValue / totalCarbonEmissions;
-    });
-  } else {
-    // Return an empty Consumption Summary if totalCarbonEmissions is zero
-    return newConsumptionSummary();
-  }
-
-  // Update total carbon emissions in consumption summary
-  consumptionSummary.totalCarbonEmissions = totalCarbonEmissions;
-
-  return consumptionSummary;
-}
-
-function newConsumptionSummary(): ConsumptionSummary {
-  return {
-    totalCarbonEmissions: 0,
-    entries: [
-      {
-        category: "electricity",
-        value: 0,
-        absoluteValue: 0,
-      },
-      {
-        category: "transportation",
-        value: 0,
-        absoluteValue: 0,
-      },
-      {
-        category: "heating",
-        value: 0,
-        absoluteValue: 0,
-      },
-    ],
-  };
-}
-
-/**
- * [copyMetrics]
- * This function is commented out intentionally.
- * It is only used for copying metrics from one country to multiple others to avoid excessive work on the Firestore visual editor.
- */
-/*
-async function copyMetrics() {
-  const db = admin.firestore().collection(FirestoreCollections.countries.name);
-  const listOfCountries = [
-    "2E9Ejc8qBJC6HnlPPdIh",
-    "4sq82jNQm3x3bH9Fkijm",
-    "8mgi5IR4xn9Yca4zDLtU",
-    "KhUolhyvcbdEsPyREqOZ",
-    "udn3GiM30aqviGBkswpl",
-  ];
-  db.doc("sPXh74wjZf14Jtmkaas6")
-    .collection(FirestoreCollections.countries.metrics.name)
-    .get()
-    .then((snapshot) => {
-      const euMetricData = snapshot.docs[0].data();
-      listOfCountries.forEach((item) => {
-        const setDoc = db
-          .doc(item)
-          .collection(FirestoreCollections.countries.metrics.name)
-          .doc(snapshot.docs[0].id)
-          .set(euMetricData);
-        setDoc.then((res) => {
-          console.log("Set: ", res);
-        });
-      });
-    });
-}
-*/
