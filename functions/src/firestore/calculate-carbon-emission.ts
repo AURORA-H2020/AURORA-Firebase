@@ -71,7 +71,7 @@ export const calculateCarbonEmissions = functions
     }
 
     // Version of this implementation of the calculateConsumption function. Increase to trigger recalculating all consumptions on next data entry.
-    const latestConsumptionVersion = "1.0.0";
+    const latestConsumptionVersion = "1.0.1";
 
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
     if (!user.consumptionMeta || user.consumptionMeta?.version != latestConsumptionVersion) {
@@ -228,7 +228,7 @@ async function calculateConsumption(
       const consumptionData = {
         // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
         carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
-        energyExpended: consumption.value ?? undefined,
+        energyExpended: (consumption.value / heatingData.householdSize) ?? undefined,
       };
       if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
@@ -269,7 +269,7 @@ async function calculateConsumption(
       const consumptionData = {
         // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
         carbonEmission: (consumption.value / electricityData.householdSize) * electricityEF ?? undefined,
-        energyExpended: consumption.value ?? undefined,
+        energyExpended: (consumption.value / electricityData.householdSize) ?? undefined,
       };
       if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
