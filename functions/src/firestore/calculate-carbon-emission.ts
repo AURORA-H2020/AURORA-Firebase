@@ -228,7 +228,7 @@ async function calculateConsumption(
       const consumptionData = {
         // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the heating emission factor.
         carbonEmission: (consumption.value / heatingData.householdSize) * heatingEF ?? undefined,
-        energyExpended: (consumption.value / heatingData.householdSize) ?? undefined,
+        energyExpended: consumption.value / heatingData.householdSize ?? undefined,
       };
       if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
@@ -269,7 +269,7 @@ async function calculateConsumption(
       const consumptionData = {
         // Calculation for the carbon emission. Takes the entered kWh value, divided by the number of people in the household, times the electricity emission factor.
         carbonEmission: (consumption.value / electricityData.householdSize) * electricityEF ?? undefined,
-        energyExpended: (consumption.value / electricityData.householdSize) ?? undefined,
+        energyExpended: consumption.value / electricityData.householdSize ?? undefined,
       };
       if (!isNaN(consumptionData.carbonEmission) && !isNaN(consumptionData.energyExpended)) return consumptionData;
       else
@@ -416,10 +416,12 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
     if (!privateVehicleOccupancy) {
       privateVehicleOccupancy = 1;
     } else if (privateVehicleOccupancy > 2) {
-      if (transportationType in ["motorcycle, electricMotorcycle"]) {
+      if (transportationType in ["motorcycle", "electricMotorcycle"]) {
         privateVehicleOccupancy = 2;
       } else if (privateVehicleOccupancy > 5) {
         privateVehicleOccupancy = 5;
+      } else {
+        privateVehicleOccupancy = 1;
       }
     }
     if (transportationType in metrics.transportation && transportationType in metrics.transportationEnergy) {
