@@ -4,8 +4,7 @@ service cloud.firestore {
 
     // Disallow any read or write which are not explicitly allowed
     match /{document=**} {
-      allow read: if false;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     // Access-Rules for countries collection and its subcollections
@@ -39,10 +38,8 @@ service cloud.firestore {
 
         // Access-Rules for consumptions subcollection
         match /consumptions/{consumptionID} {
-          // Allow read if auth uid matches with the userId
-          allow read: if request.auth.uid == userId;
-          // Allow write if auth uid matches with the userId
-          allow write: if request.auth.uid == userId;
+          // Allow read and write if auth uid matches with the userId
+          allow read, write: if request.auth.uid == userId;
         }
 
         // Access-Rules for consumption-summaries subcollection
@@ -51,6 +48,11 @@ service cloud.firestore {
           allow read: if request.auth.uid == userId;
           // Deny write
           allow write: if false
+        }
+
+        match /recurring-consumptions/{recurringConsumptionID} {
+          // Allow read and write if auth uid matches with the userId
+          allow read, write: if request.auth.uid == userId;
         }
     }
 
