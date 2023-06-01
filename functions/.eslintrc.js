@@ -28,5 +28,6 @@ module.exports = {
     "require-jsdoc": 0,
     "valid-jsdoc": 0,
     "max-len": 0,
+    "no-case-declarations": 0,
   },
 };
