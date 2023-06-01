@@ -28,7 +28,7 @@ export const processRecurringConsumptions = functions
           // Switch on unit of frequency
           switch (recurringConsumption.frequency.unit) {
             case "daily":
-              // Simply do nothing as consumption should be created every day
+              // Simply do nothing as the consumption should be created every day
               break;
             case "weekly":
               // Retrieve the day of the week
