@@ -396,4 +396,155 @@ describe("Firestore Security Rules", () => {
         ));
     });
   });
+
+  describe("/users/recurring-consumptions", () => {
+    describe("Unauthorized User", () => {
+      it("Deny to read a single recurring consumption", () =>
+        assertFails(
+          unauthenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .get()
+        ));
+      it("Deny to list all recurring consumptions", () =>
+        assertFails(
+          unauthenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .get()
+        ));
+      it("Deny to create a consumption", () =>
+        assertFails(
+          unauthenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .add({})
+        ));
+      it("Deny to update a recurring consumption", () =>
+        assertFails(
+          unauthenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .update({})
+        ));
+      it("Deny to delete a recurring consumption", () =>
+        assertFails(
+          unauthenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .delete()
+        ));
+    });
+    describe("Authorized User", () => {
+      it("Allow to read a single recurring consumption if auth uid matches", () =>
+        assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .get()
+        ));
+      it("Deny to read a single recurring consumption if auth uid not matches", () =>
+        assertFails(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc("1")
+            .collection("recurring-consumptions")
+            .doc("1")
+            .get()
+        ));
+      it("Allow to list all recurring consumptions if auth uid matches", () =>
+        assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .get()
+        ));
+      it("Deny to list all recurring consumptions if auth uid not matches", () =>
+        assertFails(
+          authenticatedContext.firestore().collection("users").doc("1").collection("recurring-consumptions").get()
+        ));
+      it("Allow to create a recurring consumption if auth uid matches", () =>
+        assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .add({})
+        ));
+      it("Deny to create a recurring consumption if auth uid not matches", () =>
+        assertFails(
+          authenticatedContext.firestore().collection("users").doc("1").collection("recurring-consumptions").add({})
+        ));
+      it("Allow to update a recurring consumption", async () => {
+        await testEnvironment.withSecurityRulesDisabled((context) =>
+          context
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .set({})
+        );
+        await assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .update({})
+        );
+      });
+      it("Deny to update a recurring consumption if auth uid not matches", () =>
+        assertFails(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc("1")
+            .collection("recurring-consumptions")
+            .doc("1")
+            .update({})
+        ));
+      it("Allow to delete a recurring consumption if auth uid matches", () =>
+        assertSucceeds(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc(authenticatedContextUserId)
+            .collection("recurring-consumptions")
+            .doc("1")
+            .delete()
+        ));
+      it("Deny to delete a recurring consumption if auth uid not matches", () =>
+        assertFails(
+          authenticatedContext
+            .firestore()
+            .collection("users")
+            .doc("1")
+            .collection("recurring-consumptions")
+            .doc("1")
+            .delete()
+        ));
+    });
+  });
 });
