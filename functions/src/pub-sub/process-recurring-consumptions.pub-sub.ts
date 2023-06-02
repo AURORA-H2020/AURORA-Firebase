@@ -45,6 +45,7 @@ export const processRecurringConsumptions = functions
               }
               break;
             case "monthly":
+              // TODO: Add fallback for February where recurring consumption is either 29 or 30
               // Check if day of month does not match the value of the frequency
               if (new Date().getDate() !== recurringConsumption.frequency.value) {
                 // Do not create consumption
