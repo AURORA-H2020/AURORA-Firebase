@@ -1,6 +1,5 @@
 import { UserGender } from "./user-gender";
 import { UserConsumptionMetadata } from "./user-consumption-metadata";
-import { DeprecatedConsumptionSummary } from "../consumption-summary/deprecated-consumption-summary";
 
 /**
  * A user
@@ -38,8 +37,4 @@ export interface User {
    * The city in country identifier
    */
   city?: string;
-  /**
-   * The consumption summary (deprecated)
-   */
-  consumptionSummary?: DeprecatedConsumptionSummary;
 }

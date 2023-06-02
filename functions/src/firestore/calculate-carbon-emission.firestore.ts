@@ -488,8 +488,6 @@ async function calculateConsumptionSummary(
         " Recalculating consumption summary for user: " +
         context.userId
     );
-    // run migrations, as risk is high that they havent been applied yet.
-    runMigrations(context.userId, user);
     await admin
       .firestore()
       .collection(FirebaseConstants.collections.users.name)
@@ -1010,16 +1008,6 @@ function consumptionDaysArray(
     }
   }
   return arr;
-}
-
-function runMigrations(userId: string, user: User) {
-  // simple migration to delete the old consumptionSummary property, if present
-  if (user.consumptionSummary) {
-    admin.firestore().collection(FirebaseConstants.collections.users.name).doc(userId).update({
-      consumptionSummary: admin.firestore.FieldValue.delete(),
-    });
-    console.log("Migration applied. Removed consumptionSummary from User " + userId);
-  }
 }
 
 function isXDaysAgo(date: Timestamp | undefined, thresholdDays: number): boolean {
