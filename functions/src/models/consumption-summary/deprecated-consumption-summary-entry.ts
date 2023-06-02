@@ -1,9 +1,11 @@
 import { ConsumptionCategory } from "../consumption/consumption-category";
 
 /**
- * A consumption summary entry
+ * @deprecated
+ * An old variant of a consumption summary entry.
+ * Please use "consumption-summary.ts"
  */
-export interface ConsumptionSummaryEntry {
+export interface DeprecatedConsumptionSummaryEntry {
   category: ConsumptionCategory;
   value: number;
   absoluteValue: number;

@@ -1,10 +1,13 @@
 import { Timestamp } from "firebase-admin/firestore";
 
+/**
+ * A country metric
+ */
 export interface CountryMetric {
   validFrom: Timestamp;
   electricity: {
     default: number;
-  },
+  };
   heating: {
     oil: number;
     naturalGas: number;
@@ -18,7 +21,7 @@ export interface CountryMetric {
     coal: number;
     wasteTreatment: number;
     default: number;
-  }
+  };
   transportation: {
     fuelCar: {
       1?: number;
@@ -26,7 +29,7 @@ export interface CountryMetric {
       3?: number;
       4?: number;
       5?: number;
-    }
+    };
     electricCar: {
       1: number;
       2: number;
@@ -109,5 +112,5 @@ export interface CountryMetric {
     walking: {
       1: number;
     };
-  }
+  };
 }

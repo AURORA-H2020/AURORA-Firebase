@@ -1,3 +1,6 @@
+/**
+ * A consumption district heating source
+ */
 export type ConsumptionDistrictHeatingSource =
   | "coal"
   | "naturalGas"

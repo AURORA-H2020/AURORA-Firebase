@@ -1,7 +1,19 @@
-import { LabelStructure } from "./labels/country-label-structure";
+import { CountryLabelStructure } from "./labels/country-label-structure";
 
+/**
+ * A country
+ */
 export interface Country {
+  /**
+   * The ISO 3166 Alpha-2 country code
+   */
   countryCode: string;
+  /**
+   * The ISO 4217 currency code
+   */
   currencyCode: string;
-  labels: LabelStructure;
+  /**
+   * The label structure
+   */
+  labels: CountryLabelStructure;
 }

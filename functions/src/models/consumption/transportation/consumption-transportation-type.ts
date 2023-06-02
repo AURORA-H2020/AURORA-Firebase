@@ -1,3 +1,6 @@
+/**
+ * A consumption transportation type
+ */
 export type ConsumptionTransportationType =
   | "fuelCar"
   | "electricCar"

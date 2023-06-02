@@ -1,3 +1,6 @@
+/**
+ * A consumption heating fuel
+ */
 export type ConsumptionHeatingFuel =
   | "oil"
   | "naturalGas"
