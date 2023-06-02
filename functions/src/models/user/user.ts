@@ -24,11 +24,11 @@ export interface User {
   /**
    * The consumption metadata
    */
-  consumptionMeta: UserConsumptionMetadata;
+  consumptionMeta?: UserConsumptionMetadata;
   /**
    * The consumption summary metadata
    */
-  consumptionSummaryMeta: UserConsumptionMetadata;
+  consumptionSummaryMeta?: UserConsumptionMetadata;
   /**
    * The country identifier
    */
