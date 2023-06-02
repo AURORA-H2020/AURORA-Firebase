@@ -15,4 +15,5 @@ export interface Consumption {
   description?: string;
   carbonEmissions?: number;
   energyExpended?: number;
+  generatedByRecurringConsumptionId?: string;
 }
