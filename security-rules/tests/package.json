@@ -1,9 +1,9 @@
 {
-  "name": "tests",
+  "name": "security-rules-tests",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
-    "test-firestore-security-rules": "npm run build && firebase emulators:exec --only firestore \"mocha --timeout 10000 --exit lib/firestore-security-rules.spec.js\""
+    "test-firestore-security-rules": "npm run build && firebase emulators:exec --only firestore \"mocha --timeout 10000 --exit lib/firestore/index.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^2.0.5",

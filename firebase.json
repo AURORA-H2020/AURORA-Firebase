@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "security-rules/firestore.rules"
   },
   "functions": [
     {
