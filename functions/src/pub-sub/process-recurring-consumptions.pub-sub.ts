@@ -77,6 +77,7 @@ export const processRecurringConsumptions = functions
                   transportationType: transportation.transportationType,
                 },
                 value: transportation.distance,
+                generatedByRecurringConsumptionId: doc.id,
               };
           }
           // Add consumption
