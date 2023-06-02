@@ -27,5 +27,10 @@ export const FirestoreCollections = {
       path: (userId: string) =>
         [FirestoreCollections.users.name, userId, FirestoreCollections.users.consumptionSummaries.name].join("/"),
     },
+    recurringConsumptions: {
+      name: "recurring-consumptions",
+      path: (userId: string) =>
+        [FirestoreCollections.users.name, userId, FirestoreCollections.users.recurringConsumptions.name].join("/"),
+    },
   },
 };

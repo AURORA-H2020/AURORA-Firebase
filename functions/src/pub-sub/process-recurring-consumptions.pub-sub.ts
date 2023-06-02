@@ -5,6 +5,7 @@ import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { RecurringConsumption } from "../models/recurring-consumption/recurring-consumption";
 import { Consumption } from "../models/consumption/consumption";
 import { Timestamp } from "firebase-admin/firestore";
+import { FirestoreCollections } from "../utils/firestore-collections";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -19,7 +20,10 @@ export const processRecurringConsumptions = functions
   .region(PreferredCloudFunctionRegion)
   .pubsub.schedule("every day 00:05")
   .onRun(async () => {
-    const recurringConsumptions = await admin.firestore().collectionGroup("recurring-consumptions").get();
+    const recurringConsumptions = await admin
+      .firestore()
+      .collectionGroup(FirestoreCollections.users.recurringConsumptions.name)
+      .get();
     await Promise.allSettled(
       recurringConsumptions.docs
         .map((doc) => {
@@ -84,7 +88,7 @@ export const processRecurringConsumptions = functions
           // Add consumption
           const recurringConsumptionsCollection = doc.ref.parent;
           const userDocument = recurringConsumptionsCollection.parent;
-          return userDocument?.collection("consumptions").add(consumption);
+          return userDocument?.collection(FirestoreCollections.users.consumptions.name).add(consumption);
         })
         .filter(Boolean)
     );
