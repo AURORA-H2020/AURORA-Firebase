@@ -1,4 +1,4 @@
-import { setGlobalOptions } from "firebase-functions/lib/v2";
+import { setGlobalOptions } from "firebase-functions/v2";
 import { FirebaseConstants } from "./utils/firebase-constants";
 
 // Use preferred cloud function region
