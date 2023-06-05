@@ -1,8 +1,7 @@
 import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
-import { PreferredCloudFunctionRegion } from "../utils/preferred-cloud-function-region";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
-import { FirestoreCollections } from "../utils/firestore-collections";
+import { FirebaseConstants } from "../utils/firebase-constants";
+import { getFirestore } from "firebase-admin/firestore";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -14,11 +13,12 @@ initializeAppIfNeeded();
  * associated with the deleted user.
  */
 export const deleteUserData = functions
-  .region(PreferredCloudFunctionRegion)
+  .region(FirebaseConstants.preferredCloudFunctionRegion)
   .auth.user()
   .onDelete(async (user) => {
     console.log("Deleting user data", user.uid);
-    const bulkWriter = admin.firestore().bulkWriter();
+    const firestore = getFirestore();
+    const bulkWriter = firestore.bulkWriter();
     const maximumRetryAttempts = 3;
     bulkWriter.onWriteError((error) => {
       if (error.failedAttempts < maximumRetryAttempts) {
@@ -28,8 +28,9 @@ export const deleteUserData = functions
         return false;
       }
     });
-    await admin
-      .firestore()
-      .recursiveDelete(admin.firestore().collection(FirestoreCollections.users.name).doc(user.uid), bulkWriter);
+    await firestore.recursiveDelete(
+      firestore.collection(FirebaseConstants.collections.users.name).doc(user.uid),
+      bulkWriter
+    );
     console.log("Successfully deleted user data", user.uid);
   });

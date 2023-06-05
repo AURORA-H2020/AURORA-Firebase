@@ -1,16 +1,19 @@
-import { LabelValues } from "./country-label-values";
+import { CountryLabelValues } from "./country-label-values";
 
-export interface LabelStructure {
+/**
+ * A country label structure
+ */
+export interface CountryLabelStructure {
   carbonEmission: {
-    overall: LabelValues[];
-    electricity: LabelValues[];
-    heating: LabelValues[];
-    transportation: LabelValues[];
+    overall: CountryLabelValues[];
+    electricity: CountryLabelValues[];
+    heating: CountryLabelValues[];
+    transportation: CountryLabelValues[];
   };
   energyExpended: {
-    overall: LabelValues[];
-    electricity: LabelValues[];
-    heating: LabelValues[];
-    transportation: LabelValues[];
+    overall: CountryLabelValues[];
+    electricity: CountryLabelValues[];
+    heating: CountryLabelValues[];
+    transportation: CountryLabelValues[];
   };
 }
