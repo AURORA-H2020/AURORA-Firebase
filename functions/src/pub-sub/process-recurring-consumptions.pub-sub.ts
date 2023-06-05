@@ -22,9 +22,11 @@ const defaultTimeZone = "Europe/Berlin";
 export const processRecurringConsumptions = onSchedule(
   { schedule: "every day 00:05", timeZone: defaultTimeZone },
   async () => {
+    // Retrieve all recurring consumptions
     const recurringConsumptions = await getFirestore()
       .collectionGroup(FirebaseConstants.collections.users.recurringConsumptions.name)
       .get();
+    // Wait until all recurring consumptions have been processed
     await Promise.allSettled(
       recurringConsumptions.docs
         .map((recurringConsumptionDocument) => {
@@ -80,7 +82,7 @@ function frequencyMatches(recurringConsumption: RecurringConsumption, currentDat
   // Switch on unit of frequency
   switch (recurringConsumption.frequency.unit) {
     case "daily":
-      // Frequency matches
+      // Frequency always matches
       return true;
     case "weekly":
       // Retrieve the day of the week
@@ -90,22 +92,12 @@ function frequencyMatches(recurringConsumption: RecurringConsumption, currentDat
         // Set week day to 7 instead of 0
         weekday = 7;
       }
-      // Check if week day does not match with the value of the frequency
-      if (weekday !== recurringConsumption.frequency.value) {
-        // Frequency does not match
-        return false;
-      }
-      // Frequency matches
-      return true;
+      // Return bool if weekday matches the frequency value
+      return weekday === recurringConsumption.frequency.value;
     case "monthly":
-      // TODO: Add fallback for February where recurring consumption is either 29 or 30
-      // Check if day of month does not match the value of the frequency
-      if (currentDate.getDate() !== recurringConsumption.frequency.value) {
-        // Frequency does not match
-        return false;
-      }
-      // Frequency matches
-      return true;
+      // TODO: Add fallback for February (only 28 days in general) where recurring consumption is either 29 or 30
+      // Return bool if day in month matches the frequency value
+      return currentDate.getDate() === recurringConsumption.frequency.value;
   }
 }
 
