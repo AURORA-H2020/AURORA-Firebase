@@ -1,9 +1,8 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import * as admin from "firebase-admin";
 import { RecurringConsumption } from "../models/recurring-consumption/recurring-consumption";
 import { Consumption } from "../models/consumption/consumption";
-import { Timestamp } from "firebase-admin/firestore";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { FirebaseConstants } from "../utils/firebase-constants";
 
 // Initialize Firebase Admin SDK
@@ -23,8 +22,7 @@ const defaultTimeZone = "Europe/Berlin";
 export const processRecurringConsumptions = onSchedule(
   { schedule: "every day 00:05", timeZone: defaultTimeZone },
   async () => {
-    const recurringConsumptions = await admin
-      .firestore()
+    const recurringConsumptions = await getFirestore()
       .collectionGroup(FirebaseConstants.collections.users.recurringConsumptions.name)
       .get();
     await Promise.allSettled(

@@ -1,8 +1,8 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { discardError } from "../utils/discard-error";
+import { getFirestore } from "firebase-admin/firestore";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -21,10 +21,10 @@ export const downloadUserData = onCall(async (request) => {
     // Throw failed precondition error
     throw new HttpsError("failed-precondition", "The function must be called while authenticated");
   }
+  // Retrieve an instance of firestore
+  const firestore = getFirestore();
   // Retrieve user data
-  const user = (
-    await admin.firestore().collection(FirebaseConstants.collections.users.name).doc(auth.uid).get()
-  ).data();
+  const user = (await firestore.collection(FirebaseConstants.collections.users.name).doc(auth.uid).get()).data();
   // Check if user data is unavailable
   if (!user) {
     // Throw not found error
@@ -34,8 +34,7 @@ export const downloadUserData = onCall(async (request) => {
   const consumptions =
     (
       await discardError(() =>
-        admin
-          .firestore()
+        firestore
           .collection(FirebaseConstants.collections.users.name)
           .doc(auth.uid)
           .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -46,8 +45,7 @@ export const downloadUserData = onCall(async (request) => {
   const consumptionSummaries =
     (
       await discardError(() =>
-        admin
-          .firestore()
+        firestore
           .collection(FirebaseConstants.collections.users.name)
           .doc(auth.uid)
           .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
@@ -58,8 +56,7 @@ export const downloadUserData = onCall(async (request) => {
   const recurringConsumptions =
     (
       await discardError(() =>
-        admin
-          .firestore()
+        firestore
           .collection(FirebaseConstants.collections.users.name)
           .doc(auth.uid)
           .collection(FirebaseConstants.collections.users.recurringConsumptions.name)

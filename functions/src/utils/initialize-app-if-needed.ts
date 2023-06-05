@@ -1,8 +1,9 @@
-import * as admin from "firebase-admin";
+import { App, getApps, initializeApp } from "firebase-admin/app";
 
 /**
  * Initializes the Firebase Admin SDK, if needed.
  */
-export function initializeAppIfNeeded(): admin.app.App | null {
-  return admin.apps.length === 0 ? admin.initializeApp() : admin.apps[0];
+export function initializeAppIfNeeded(): App {
+  const apps = getApps();
+  return apps.length === 0 ? initializeApp() : apps[0];
 }

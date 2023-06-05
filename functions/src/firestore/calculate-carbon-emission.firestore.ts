@@ -1,7 +1,6 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import * as admin from "firebase-admin";
-import { Timestamp } from "firebase-admin/firestore";
+import { getFirestore, Timestamp, DocumentData } from "firebase-admin/firestore";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
@@ -50,7 +49,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
     }
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
-      await admin.firestore().collection(FirebaseConstants.collections.users.name).doc(event.params.userId).get()
+      await getFirestore().collection(FirebaseConstants.collections.users.name).doc(event.params.userId).get()
     ).data() as User;
     if (!user) {
       throw new Error("User not found");
@@ -67,8 +66,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           "  Recalculating consumptions for user: " +
           event.params.userId
       );
-      await admin
-        .firestore()
+      await getFirestore()
         .collection(FirebaseConstants.collections.users.name)
         .doc(event.params.userId)
         .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -98,8 +96,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           });
         });
       // Write latest version to user after recalculating all consumptions
-      await admin
-        .firestore()
+      await getFirestore()
         .collection(FirebaseConstants.collections.users.name)
         .doc(event.params.userId)
         .update({
@@ -127,8 +124,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
         ) {
           // Update consumption and set calculated carbon emissions
-          await admin
-            .firestore()
+          await getFirestore()
             .collection(FirebaseConstants.collections.users.name)
             .doc(event.params.userId)
             .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -142,8 +138,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
         }
         // get consumption again from firestore, as it has been updated with calculated consumptions
         const consumption = (
-          await admin
-            .firestore()
+          await getFirestore()
             .collection(FirebaseConstants.collections.users.name)
             .doc(event.params.userId)
             .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -316,7 +311,7 @@ async function calculateConsumption(
  * @param heatingData Part of the consumption relevant to heating.
  * @param metrics Document Data containing all EF values (metrics).
  */
-function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firestore.DocumentData) {
+function getHeatingEF(heatingData: Consumption["heating"], metrics: DocumentData) {
   if (!heatingData) {
     throw new Error("Could not get heating metric in 'getHeatingEF'");
   }
@@ -356,7 +351,7 @@ function getHeatingEF(heatingData: Consumption["heating"], metrics: admin.firest
  * @param electricityData Part of the consumption relevant to electricity.
  * @param metrics Document Data containing all EF values (metrics).
  */
-function getElectricityEF(electricityData: Consumption["electricity"], metrics: admin.firestore.DocumentData) {
+function getElectricityEF(electricityData: Consumption["electricity"], metrics: DocumentData) {
   if (!metrics.electricity.default) {
     throw new Error("Could not get electricity metric in 'getElectricityEF'");
   }
@@ -368,7 +363,7 @@ function getElectricityEF(electricityData: Consumption["electricity"], metrics: 
  * @param transportationData Part of the consumption relevant to transportation.
  * @param metrics Document Data containing all EF values (metrics).
  */
-function getTransportationEF(transportationData: Consumption["transportation"], metrics: admin.firestore.DocumentData) {
+function getTransportationEF(transportationData: Consumption["transportation"], metrics: DocumentData) {
   if (!transportationData) {
     throw new Error("Could not get transportation metric in 'getTransportationEF'");
   }
@@ -414,8 +409,7 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
  * @param consumptionDate Timestamp of the consumption occurrence to get the most viable metric version.
  */
 async function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
-  const metrics = (await admin
-    .firestore()
+  const metrics = (await getFirestore()
     .collection(FirebaseConstants.collections.countries.name)
     .doc(countryID)
     .collection(FirebaseConstants.collections.countries.metrics.name)
@@ -445,14 +439,13 @@ async function calculateConsumptionSummary(
   // Version of this implementation of the calculateConsumptionSummary function. Increase to trigger recalculating all entries on next data entry.
   const latestConsumptionSummaryVersion = "1.0.0";
   const countryLabels = (
-    await admin.firestore().collection(FirebaseConstants.collections.countries.name).doc(user.country).get()
+    await getFirestore().collection(FirebaseConstants.collections.countries.name).doc(user.country).get()
   ).data()?.labels;
   if (!countryLabels) return;
   let consumptionSummaryArray: ConsumptionSummary[] | undefined = [];
   // get existing consumption summary, if any, but only if a single consumption is provided. Otherwise recalculate the summary from scratch.
   if (consumption) {
-    await admin
-      .firestore()
+    await getFirestore()
       .collection(FirebaseConstants.collections.users.name)
       .doc(context.userId)
       .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
@@ -486,8 +479,7 @@ async function calculateConsumptionSummary(
         " Recalculating consumption summary for user: " +
         context.userId
     );
-    await admin
-      .firestore()
+    await getFirestore()
       .collection(FirebaseConstants.collections.users.name)
       .doc(context.userId)
       .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -508,8 +500,7 @@ async function calculateConsumptionSummary(
       });
     if (consumptionSummaryArray.length > 0) {
       // Write latest version to user after recalculating full consumption summary
-      await admin
-        .firestore()
+      await getFirestore()
         .collection(FirebaseConstants.collections.users.name)
         .doc(context.userId)
         .update({
@@ -523,8 +514,7 @@ async function calculateConsumptionSummary(
   if (consumptionSummaryArray) {
     await Promise.allSettled(
       consumptionSummaryArray.map((consumptionSummary) =>
-        admin
-          .firestore()
+        getFirestore()
           .collection(FirebaseConstants.collections.users.name)
           .doc(context.userId)
           .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
@@ -535,8 +525,7 @@ async function calculateConsumptionSummary(
   }
   // Delete all documents in consumption-summary collection not in the latest consumption summary (i.e. deleted or empty)
   const validYears = consumptionSummaryArray?.map((a) => String(a.year));
-  await admin
-    .firestore()
+  await getFirestore()
     .collection(FirebaseConstants.collections.users.name)
     .doc(context.userId)
     .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
