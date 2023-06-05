@@ -23,8 +23,6 @@ export const calculateCarbonEmissions = onDocumentWritten(
   `${FirebaseConstants.collections.users.name}/{userId}/${FirebaseConstants.collections.users.consumptions.name}/{consumptionId}`,
   async (event) => {
     let isEdit = false;
-    // check if this is a reinvocation and exit function if it is
-    // check that document has not been deleted.
     if (event.data?.after.exists && event.data?.before.exists) {
       // check if the user entered data hasn't changed (no edit)
       const category: ConsumptionCategory = event.data.after.data()?.category;
@@ -522,15 +520,19 @@ async function calculateConsumptionSummary(
         });
     }
   }
-  consumptionSummaryArray?.forEach(async (consumptionSummary) => {
-    await admin
-      .firestore()
-      .collection(FirebaseConstants.collections.users.name)
-      .doc(context.userId)
-      .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
-      .doc(String(consumptionSummary.year))
-      .set(consumptionSummary);
-  });
+  if (consumptionSummaryArray) {
+    await Promise.allSettled(
+      consumptionSummaryArray.map((consumptionSummary) =>
+        admin
+          .firestore()
+          .collection(FirebaseConstants.collections.users.name)
+          .doc(context.userId)
+          .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
+          .doc(String(consumptionSummary.year))
+          .set(consumptionSummary)
+      )
+    );
+  }
   // Delete all documents in consumption-summary collection not in the latest consumption summary (i.e. deleted or empty)
   const validYears = consumptionSummaryArray?.map((a) => String(a.year));
   await admin
