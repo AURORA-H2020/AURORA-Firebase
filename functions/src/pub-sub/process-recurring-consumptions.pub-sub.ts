@@ -123,6 +123,8 @@ function frequencyMatches(recurringConsumption: RecurringConsumption, currentDat
         // and the day of the month specified in the frequency is greater than the total number of days
         return currentDayOfMonth === numberOfDaysInMonth && frequencyDayOfMonth > numberOfDaysInMonth;
       }
+    default:
+      return false;
   }
 }
 
