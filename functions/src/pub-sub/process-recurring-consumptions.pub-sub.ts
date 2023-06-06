@@ -22,9 +22,10 @@ const defaultTimeZone = "Europe/Berlin";
 export const processRecurringConsumptions = onSchedule(
   { schedule: "every day 00:05", timeZone: defaultTimeZone },
   async () => {
-    // Retrieve all recurring consumptions
+    // Retrieve all enabled recurring consumptions
     const recurringConsumptions = await getFirestore()
       .collectionGroup(FirebaseConstants.collections.users.recurringConsumptions.name)
+      .where("isEnabled", "==", true)
       .get();
     // Wait until all recurring consumptions have been processed
     await Promise.allSettled(
