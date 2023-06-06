@@ -12,6 +12,10 @@ export interface RecurringConsumption {
    */
   createdAt: Timestamp;
   /**
+   * Bool value if recurring consumption is enabled
+   */
+  isEnabled: boolean;
+  /**
    * The frequency
    */
   frequency: RecurringConsumptionFrequency;
