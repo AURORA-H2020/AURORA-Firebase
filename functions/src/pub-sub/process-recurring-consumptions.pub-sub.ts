@@ -95,9 +95,34 @@ function frequencyMatches(recurringConsumption: RecurringConsumption, currentDat
       // Return bool if weekday is included
       return recurringConsumption.frequency.weekdays?.includes(weekday) === true;
     case "monthly":
-      // TODO: Add fallback for February (only 28 days in general) where recurring consumption is either 29, 30 or 31
-      // Return bool if day of month matches
-      return currentDate.getDate() === recurringConsumption.frequency.dayOfMonth;
+      // Initialize the day of the month provided by the frequency
+      const frequencyDayOfMonth = recurringConsumption.frequency.dayOfMonth;
+      // Check if day of month is unavailable
+      if (!frequencyDayOfMonth) {
+        // Frequency does not match
+        return false;
+      }
+      // Initialize the current day of month
+      const currentDayOfMonth = currentDate.getDate();
+      // Check if current day of month matches with the frequency day of month
+      if (currentDayOfMonth === frequencyDayOfMonth) {
+        // Frequency matches
+        return true;
+      }
+      // Otherwise perform fallback if the frequency specifies a day of month
+      // which is higher than the available number of days for the current month.
+      else {
+        // Initialize a copy of the current date
+        const currentDateCopy = new Date(currentDate);
+        // Set the utc date to zero which will return the
+        // number of days in the month when calling `getDate`
+        currentDateCopy.setUTCDate(0);
+        // Retrieve the number of days in month
+        const numberOfDaysInMonth = currentDateCopy.getDate();
+        // Frequency matches if the current day of month matches with the total number of days
+        // and the day of the month specified in the frequency is greater than the total number of days
+        return currentDayOfMonth === numberOfDaysInMonth && frequencyDayOfMonth > numberOfDaysInMonth;
+      }
   }
 }
 
