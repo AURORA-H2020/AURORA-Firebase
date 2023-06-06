@@ -27,4 +27,8 @@ export interface RecurringConsumption {
    * The transportation information
    */
   transportation?: RecurringConsumptionTransportation;
+  /**
+   * The description
+   */
+  description?: string;
 }

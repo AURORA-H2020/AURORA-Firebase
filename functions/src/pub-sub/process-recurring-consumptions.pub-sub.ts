@@ -159,6 +159,7 @@ function makeConsumption(recurringConsumption: RecurringConsumption): Consumptio
           publicVehicleOccupancy: transportation.publicVehicleOccupancy,
         },
         value: transportation.distance,
+        description: recurringConsumption.description,
       };
   }
 }
