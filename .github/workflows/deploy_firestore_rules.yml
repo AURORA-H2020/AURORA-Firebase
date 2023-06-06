@@ -6,8 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'tests/**'
-      - 'firestore.rules'
+      - 'security-rules/**'
 
 jobs:
   deploy:
