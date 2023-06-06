@@ -92,12 +92,12 @@ function frequencyMatches(recurringConsumption: RecurringConsumption, currentDat
         // Set week day to 7 instead of 0
         weekday = 7;
       }
-      // Return bool if weekday matches the frequency value
-      return weekday === recurringConsumption.frequency.value;
+      // Return bool if weekday is included
+      return recurringConsumption.frequency.weekdays?.includes(weekday) === true;
     case "monthly":
-      // TODO: Add fallback for February (only 28 days in general) where recurring consumption is either 29 or 30
-      // Return bool if day in month matches the frequency value
-      return currentDate.getDate() === recurringConsumption.frequency.value;
+      // TODO: Add fallback for February (only 28 days in general) where recurring consumption is either 29, 30 or 31
+      // Return bool if day of month matches
+      return currentDate.getDate() === recurringConsumption.frequency.dayOfMonth;
   }
 }
 
@@ -127,6 +127,8 @@ function makeConsumption(recurringConsumption: RecurringConsumption): Consumptio
             getCurrentDate({ hours: transportation.hourOfTravel, minutes: transportation.minuteOfTravel })
           ),
           transportationType: transportation.transportationType,
+          privateVehicleOccupancy: transportation.privateVehicleOccupancy,
+          publicVehicleOccupancy: transportation.publicVehicleOccupancy,
         },
         value: transportation.distance,
       };

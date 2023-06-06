@@ -7,7 +7,13 @@ export interface RecurringConsumptionFrequency {
    */
   unit: "daily" | "weekly" | "monthly";
   /**
-   * The value
+   * The weekdays.
+   * Applicable if unit is set to `weekly`
    */
-  value: number;
+  weekdays?: number[];
+  /**
+   * The day of month.
+   * Applicable if unit is set to `monthly`
+   */
+  dayOfMonth?: number;
 }
