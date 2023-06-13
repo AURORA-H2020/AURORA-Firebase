@@ -10,7 +10,6 @@ initializeAppIfNeeded();
 
 // Initialize Firestore
 const firestore = getFirestore();
-firestore.settings({ ignoreUndefinedProperties: true });
 
 // The default time zone.
 const defaultTimeZone = "Europe/Berlin";

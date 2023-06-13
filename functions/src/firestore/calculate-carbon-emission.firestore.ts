@@ -15,7 +15,6 @@ initializeAppIfNeeded();
 
 // Initialize Firestore
 const firestore = getFirestore();
-firestore.settings({ ignoreUndefinedProperties: true });
 
 /**
  * [calculateCarbonEmissions]
