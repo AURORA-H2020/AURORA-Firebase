@@ -1,6 +1,6 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { Firestore, getFirestore, Timestamp, DocumentData } from "firebase-admin/firestore";
+import { getFirestore, Timestamp, DocumentData } from "firebase-admin/firestore";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
@@ -12,6 +12,10 @@ import { CountryLabelValues } from "../models/country/labels/country-label-value
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
+
+// Initialize Firestore
+const firestore = getFirestore();
+firestore.settings({ ignoreUndefinedProperties: true });
 
 /**
  * [calculateCarbonEmissions]
@@ -47,10 +51,6 @@ export const calculateCarbonEmissions = onDocumentWritten(
         isEdit = true;
       }
     }
-    // Retrieve an instance of firestore
-    const firestore = getFirestore();
-    // Ignore undefined properties
-    firestore.settings({ ignoreUndefinedProperties: true });
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
       await firestore.collection(FirebaseConstants.collections.users.name).doc(event.params.userId).get()
@@ -79,15 +79,10 @@ export const calculateCarbonEmissions = onDocumentWritten(
         .then((snapshot) => {
           snapshot.forEach(async (singleConsumption) => {
             try {
-              const calculatedConsumptions = await calculateConsumption(
-                firestore,
-                singleConsumption.data() as Consumption,
-                user,
-                {
-                  userId: event.params.userId,
-                  consumptionId: event.params.consumptionId,
-                }
-              );
+              const calculatedConsumptions = await calculateConsumption(singleConsumption.data() as Consumption, user, {
+                userId: event.params.userId,
+                consumptionId: event.params.consumptionId,
+              });
               if (
                 (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
                 (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
@@ -115,7 +110,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           },
         });
       // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
-      await calculateConsumptionSummary(firestore, user, {
+      await calculateConsumptionSummary(user, {
         userId: event.params.userId,
         consumptionId: event.params.consumptionId,
       });
@@ -123,15 +118,10 @@ export const calculateCarbonEmissions = onDocumentWritten(
       // Check if document still exists. No calculation necessary if it has been deleted
       if (event.data?.after.exists) {
         // Calculate carbon emissions
-        const calculatedConsumptions = await calculateConsumption(
-          firestore,
-          event.data.after.data() as Consumption,
-          user,
-          {
-            userId: event.params.userId,
-            consumptionId: event.params.consumptionId,
-          }
-        );
+        const calculatedConsumptions = await calculateConsumption(event.data.after.data() as Consumption, user, {
+          userId: event.params.userId,
+          consumptionId: event.params.consumptionId,
+        });
         // Check if carbon emissions are available
         if (
           (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
@@ -163,7 +153,6 @@ export const calculateCarbonEmissions = onDocumentWritten(
         if (!isEdit) {
           // simply add the consumption if it is not an edit
           await calculateConsumptionSummary(
-            firestore,
             user,
             { userId: event.params.userId, consumptionId: event.params.consumptionId },
             consumption as Consumption
@@ -171,7 +160,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
         } else {
           // TODO: Improve this so recalculation isn't required by removing the old consumption and adding the new.
           // Otherwise this is an edit and we recalculate all consumptions.
-          await calculateConsumptionSummary(firestore, user, {
+          await calculateConsumptionSummary(user, {
             userId: event.params.userId,
             consumptionId: event.params.consumptionId,
           });
@@ -179,7 +168,6 @@ export const calculateCarbonEmissions = onDocumentWritten(
       } else {
         // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
         await calculateConsumptionSummary(
-          firestore,
           user,
           { userId: event.params.userId, consumptionId: event.params.consumptionId },
           event.data?.before.data() as Consumption,
@@ -192,13 +180,11 @@ export const calculateCarbonEmissions = onDocumentWritten(
 
 /**
  * Calculate carbon emissions
- * @param firestore The Firestore
  * @param consumption The consumption
  * @param user The user
  * @param context The context.
  */
 async function calculateConsumption(
-  firestore: Firestore,
   consumption: Consumption,
   user: User,
   context: { userId: string; consumptionId: string }
@@ -221,11 +207,11 @@ async function calculateConsumption(
           "Heating data does not exist on User: " + context.userId + " | Consumption: " + context.consumptionId
         );
       }
-      let metrics = await getMetrics(firestore, user.country, consumptionDate);
+      let metrics = await getMetrics(user.country, consumptionDate);
       let heatingEF = getHeatingEF(heatingData, metrics);
       // Fallback in case heatingEF is not a Number
       if (!heatingEF) {
-        metrics = await getMetrics(firestore, metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
       const consumptionData = {
@@ -251,11 +237,11 @@ async function calculateConsumption(
           "Electricity data does not exist on User: " + context.userId + " | Consumption: " + context.consumptionId
         );
       }
-      let metrics = await getMetrics(firestore, user.country, consumptionDate);
+      let metrics = await getMetrics(user.country, consumptionDate);
       let electricityEF = getElectricityEF(electricityData, metrics);
       // Fallback in case electricityEF is not a Number
       if (!electricityEF) {
-        metrics = await getMetrics(firestore, metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
       }
       const consumptionData = {
@@ -284,11 +270,11 @@ async function calculateConsumption(
           "Transportation data does not exist on User: " + context.userId + " | Consumption: " + context.consumptionId
         );
       }
-      let metrics = await getMetrics(firestore, user.country, consumptionDate);
+      let metrics = await getMetrics(user.country, consumptionDate);
       let transportationFactors = getTransportationEF(transportationData, metrics);
       // Fallback in case transportationEF is not a Number
       if (!transportationFactors) {
-        metrics = await getMetrics(firestore, metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
         transportationFactors = getTransportationEF(transportationData, metrics);
       }
       if (
@@ -423,11 +409,10 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
 
 /**
  * Function to get relevant metrics based on:
- * @param firestore The Firestore
  * @param countryID ID of the associated country.
  * @param consumptionDate Timestamp of the consumption occurrence to get the most viable metric version.
  */
-async function getMetrics(firestore: Firestore, countryID: string, consumptionDate: Timestamp | undefined) {
+async function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
   const metrics = (await firestore
     .collection(FirebaseConstants.collections.countries.name)
     .doc(countryID)
@@ -450,7 +435,6 @@ async function getMetrics(firestore: Firestore, countryID: string, consumptionDa
 }
 
 async function calculateConsumptionSummary(
-  firestore: Firestore,
   user: User,
   context: { userId: string; consumptionId: string },
   consumption?: Consumption,

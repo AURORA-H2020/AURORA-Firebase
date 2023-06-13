@@ -6,6 +6,9 @@ import { getFirestore } from "firebase-admin/firestore";
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
 
+// Initialize Firestore
+const firestore = getFirestore();
+
 /**
  * [deleteUserData]
  * A Cloud Function which gets triggered when a user has been deleted.
@@ -17,7 +20,6 @@ export const deleteUserData = functions
   .auth.user()
   .onDelete(async (user) => {
     console.log("Deleting user data", user.uid);
-    const firestore = getFirestore();
     const bulkWriter = firestore.bulkWriter();
     const maximumRetryAttempts = 3;
     bulkWriter.onWriteError((error) => {
