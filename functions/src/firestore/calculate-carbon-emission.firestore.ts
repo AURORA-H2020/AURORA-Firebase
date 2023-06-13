@@ -1,6 +1,6 @@
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { getFirestore, Timestamp, DocumentData } from "firebase-admin/firestore";
+import { Firestore, getFirestore, Timestamp, DocumentData } from "firebase-admin/firestore";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { Consumption } from "../models/consumption/consumption";
 import { User } from "../models/user/user";
@@ -47,9 +47,13 @@ export const calculateCarbonEmissions = onDocumentWritten(
         isEdit = true;
       }
     }
+    // Retrieve an instance of firestore
+    const firestore = getFirestore();
+    // Ignore undefined properties
+    firestore.settings({ ignoreUndefinedProperties: true });
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
-      await getFirestore().collection(FirebaseConstants.collections.users.name).doc(event.params.userId).get()
+      await firestore.collection(FirebaseConstants.collections.users.name).doc(event.params.userId).get()
     ).data() as User;
     if (!user) {
       throw new Error("User not found");
@@ -66,7 +70,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           "  Recalculating consumptions for user: " +
           event.params.userId
       );
-      await getFirestore()
+      await firestore
         .collection(FirebaseConstants.collections.users.name)
         .doc(event.params.userId)
         .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -75,10 +79,15 @@ export const calculateCarbonEmissions = onDocumentWritten(
         .then((snapshot) => {
           snapshot.forEach(async (singleConsumption) => {
             try {
-              const calculatedConsumptions = await calculateConsumption(singleConsumption.data() as Consumption, user, {
-                userId: event.params.userId,
-                consumptionId: event.params.consumptionId,
-              });
+              const calculatedConsumptions = await calculateConsumption(
+                firestore,
+                singleConsumption.data() as Consumption,
+                user,
+                {
+                  userId: event.params.userId,
+                  consumptionId: event.params.consumptionId,
+                }
+              );
               if (
                 (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
                 (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
@@ -96,7 +105,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           });
         });
       // Write latest version to user after recalculating all consumptions
-      await getFirestore()
+      await firestore
         .collection(FirebaseConstants.collections.users.name)
         .doc(event.params.userId)
         .update({
@@ -106,7 +115,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
           },
         });
       // calculate Consumption Summary with updated consumptions. Passing no consumption will force recalculation based on all existing consumptions
-      await calculateConsumptionSummary(user, {
+      await calculateConsumptionSummary(firestore, user, {
         userId: event.params.userId,
         consumptionId: event.params.consumptionId,
       });
@@ -114,17 +123,22 @@ export const calculateCarbonEmissions = onDocumentWritten(
       // Check if document still exists. No calculation necessary if it has been deleted
       if (event.data?.after.exists) {
         // Calculate carbon emissions
-        const calculatedConsumptions = await calculateConsumption(event.data.after.data() as Consumption, user, {
-          userId: event.params.userId,
-          consumptionId: event.params.consumptionId,
-        });
+        const calculatedConsumptions = await calculateConsumption(
+          firestore,
+          event.data.after.data() as Consumption,
+          user,
+          {
+            userId: event.params.userId,
+            consumptionId: event.params.consumptionId,
+          }
+        );
         // Check if carbon emissions are available
         if (
           (calculatedConsumptions?.carbonEmission || calculatedConsumptions?.carbonEmission === 0) &&
           (calculatedConsumptions.energyExpended || calculatedConsumptions.energyExpended === 0)
         ) {
           // Update consumption and set calculated carbon emissions
-          await getFirestore()
+          await firestore
             .collection(FirebaseConstants.collections.users.name)
             .doc(event.params.userId)
             .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -138,7 +152,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
         }
         // get consumption again from firestore, as it has been updated with calculated consumptions
         const consumption = (
-          await getFirestore()
+          await firestore
             .collection(FirebaseConstants.collections.users.name)
             .doc(event.params.userId)
             .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -149,6 +163,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
         if (!isEdit) {
           // simply add the consumption if it is not an edit
           await calculateConsumptionSummary(
+            firestore,
             user,
             { userId: event.params.userId, consumptionId: event.params.consumptionId },
             consumption as Consumption
@@ -156,7 +171,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
         } else {
           // TODO: Improve this so recalculation isn't required by removing the old consumption and adding the new.
           // Otherwise this is an edit and we recalculate all consumptions.
-          await calculateConsumptionSummary(user, {
+          await calculateConsumptionSummary(firestore, user, {
             userId: event.params.userId,
             consumptionId: event.params.consumptionId,
           });
@@ -164,6 +179,7 @@ export const calculateCarbonEmissions = onDocumentWritten(
       } else {
         // If there is no snapshot.after, document has been deleted, hence needs to be removed from the summary
         await calculateConsumptionSummary(
+          firestore,
           user,
           { userId: event.params.userId, consumptionId: event.params.consumptionId },
           event.data?.before.data() as Consumption,
@@ -176,11 +192,13 @@ export const calculateCarbonEmissions = onDocumentWritten(
 
 /**
  * Calculate carbon emissions
+ * @param firestore The Firestore
  * @param consumption The consumption
  * @param user The user
  * @param context The context.
  */
 async function calculateConsumption(
+  firestore: Firestore,
   consumption: Consumption,
   user: User,
   context: { userId: string; consumptionId: string }
@@ -203,11 +221,11 @@ async function calculateConsumption(
           "Heating data does not exist on User: " + context.userId + " | Consumption: " + context.consumptionId
         );
       }
-      let metrics = await getMetrics(user.country, consumptionDate);
+      let metrics = await getMetrics(firestore, user.country, consumptionDate);
       let heatingEF = getHeatingEF(heatingData, metrics);
       // Fallback in case heatingEF is not a Number
       if (!heatingEF) {
-        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(firestore, metricsFallbackCountry, consumptionDate);
         heatingEF = getHeatingEF(heatingData, metrics);
       }
       const consumptionData = {
@@ -233,11 +251,11 @@ async function calculateConsumption(
           "Electricity data does not exist on User: " + context.userId + " | Consumption: " + context.consumptionId
         );
       }
-      let metrics = await getMetrics(user.country, consumptionDate);
+      let metrics = await getMetrics(firestore, user.country, consumptionDate);
       let electricityEF = getElectricityEF(electricityData, metrics);
       // Fallback in case electricityEF is not a Number
       if (!electricityEF) {
-        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(firestore, metricsFallbackCountry, consumptionDate);
         electricityEF = getElectricityEF(electricityData, metrics);
       }
       const consumptionData = {
@@ -266,11 +284,11 @@ async function calculateConsumption(
           "Transportation data does not exist on User: " + context.userId + " | Consumption: " + context.consumptionId
         );
       }
-      let metrics = await getMetrics(user.country, consumptionDate);
+      let metrics = await getMetrics(firestore, user.country, consumptionDate);
       let transportationFactors = getTransportationEF(transportationData, metrics);
       // Fallback in case transportationEF is not a Number
       if (!transportationFactors) {
-        metrics = await getMetrics(metricsFallbackCountry, consumptionDate);
+        metrics = await getMetrics(firestore, metricsFallbackCountry, consumptionDate);
         transportationFactors = getTransportationEF(transportationData, metrics);
       }
       if (
@@ -405,11 +423,12 @@ function getTransportationEF(transportationData: Consumption["transportation"], 
 
 /**
  * Function to get relevant metrics based on:
+ * @param firestore The Firestore
  * @param countryID ID of the associated country.
  * @param consumptionDate Timestamp of the consumption occurrence to get the most viable metric version.
  */
-async function getMetrics(countryID: string, consumptionDate: Timestamp | undefined) {
-  const metrics = (await getFirestore()
+async function getMetrics(firestore: Firestore, countryID: string, consumptionDate: Timestamp | undefined) {
+  const metrics = (await firestore
     .collection(FirebaseConstants.collections.countries.name)
     .doc(countryID)
     .collection(FirebaseConstants.collections.countries.metrics.name)
@@ -431,6 +450,7 @@ async function getMetrics(countryID: string, consumptionDate: Timestamp | undefi
 }
 
 async function calculateConsumptionSummary(
+  firestore: Firestore,
   user: User,
   context: { userId: string; consumptionId: string },
   consumption?: Consumption,
@@ -439,13 +459,13 @@ async function calculateConsumptionSummary(
   // Version of this implementation of the calculateConsumptionSummary function. Increase to trigger recalculating all entries on next data entry.
   const latestConsumptionSummaryVersion = "1.0.0";
   const countryLabels = (
-    await getFirestore().collection(FirebaseConstants.collections.countries.name).doc(user.country).get()
+    await firestore.collection(FirebaseConstants.collections.countries.name).doc(user.country).get()
   ).data()?.labels;
   if (!countryLabels) return;
   let consumptionSummaryArray: ConsumptionSummary[] | undefined = [];
   // get existing consumption summary, if any, but only if a single consumption is provided. Otherwise recalculate the summary from scratch.
   if (consumption) {
-    await getFirestore()
+    await firestore
       .collection(FirebaseConstants.collections.users.name)
       .doc(context.userId)
       .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
@@ -479,7 +499,7 @@ async function calculateConsumptionSummary(
         " Recalculating consumption summary for user: " +
         context.userId
     );
-    await getFirestore()
+    await firestore
       .collection(FirebaseConstants.collections.users.name)
       .doc(context.userId)
       .collection(FirebaseConstants.collections.users.consumptions.name)
@@ -500,7 +520,7 @@ async function calculateConsumptionSummary(
       });
     if (consumptionSummaryArray.length > 0) {
       // Write latest version to user after recalculating full consumption summary
-      await getFirestore()
+      await firestore
         .collection(FirebaseConstants.collections.users.name)
         .doc(context.userId)
         .update({
@@ -514,7 +534,7 @@ async function calculateConsumptionSummary(
   if (consumptionSummaryArray) {
     await Promise.allSettled(
       consumptionSummaryArray.map((consumptionSummary) =>
-        getFirestore()
+        firestore
           .collection(FirebaseConstants.collections.users.name)
           .doc(context.userId)
           .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
@@ -525,7 +545,7 @@ async function calculateConsumptionSummary(
   }
   // Delete all documents in consumption-summary collection not in the latest consumption summary (i.e. deleted or empty)
   const validYears = consumptionSummaryArray?.map((a) => String(a.year));
-  await getFirestore()
+  await firestore
     .collection(FirebaseConstants.collections.users.name)
     .doc(context.userId)
     .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
