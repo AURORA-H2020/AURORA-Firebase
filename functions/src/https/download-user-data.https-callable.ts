@@ -7,6 +7,9 @@ import { getFirestore } from "firebase-admin/firestore";
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
 
+// Initialize Firestore
+const firestore = getFirestore();
+
 /**
  * [downloadUserData]
  * A HTTPS Callable Cloud Function.
@@ -21,8 +24,6 @@ export const downloadUserData = onCall(async (request) => {
     // Throw failed precondition error
     throw new HttpsError("failed-precondition", "The function must be called while authenticated");
   }
-  // Retrieve an instance of firestore
-  const firestore = getFirestore();
   // Retrieve user data
   const user = (await firestore.collection(FirebaseConstants.collections.users.name).doc(auth.uid).get()).data();
   // Check if user data is unavailable
