@@ -13,6 +13,7 @@ export * from "./auth/delete-user-data.auth";
  * Firestore Cloud Functions
  */
 export * from "./firestore/calculate-carbon-emission.firestore";
+export * from "./firestore/calculate-carbon-emissions-v2.firestore";
 
 /**
  * HTTPS Cloud Functions
