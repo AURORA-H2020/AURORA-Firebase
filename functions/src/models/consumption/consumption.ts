@@ -37,6 +37,10 @@ export interface Consumption {
    */
   value: number;
   /**
+   * The version
+   */
+  version?: string;
+  /**
    * The description
    */
   description?: string;
