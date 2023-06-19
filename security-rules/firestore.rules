@@ -26,33 +26,33 @@ service cloud.firestore {
     // Access-Rules for users collection and its subcollections
     match /users/{userId} {
         // Allow single read if auth uid matches with the userId
-        allow get: if request.auth.uid == userId;
+        allow get: if request.auth != null && request.auth.uid == userId;
         // Deny list
         allow list: if false;
         // Allow Create if auth uid matches with the userId
-        allow create: if request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId;
         // Allow Update if auth uid matches with the userId
-        allow update: if request.auth.uid == userId;
+        allow update: if request.auth != null && request.auth.uid == userId;
         // Deny delete as an user documents exclusively gets deleted by a cloud function
         allow delete: if false;
 
         // Access-Rules for consumptions subcollection
         match /consumptions/{consumptionID} {
           // Allow read and write if auth uid matches with the userId
-          allow read, write: if request.auth.uid == userId;
+          allow read, write: if request.auth != null && request.auth.uid == userId;
         }
 
         // Access-Rules for consumption-summaries subcollection
         match /consumption-summaries/{consumptionSummaryID} {
           // Allow read if auth uid matches with the userId
-          allow read: if request.auth.uid == userId;
+          allow read: if request.auth != null && request.auth.uid == userId;
           // Deny write
           allow write: if false
         }
 
         match /recurring-consumptions/{recurringConsumptionID} {
           // Allow read and write if auth uid matches with the userId
-          allow read, write: if request.auth.uid == userId;
+          allow read, write: if request.auth != null && request.auth.uid == userId;
         }
     }
 
