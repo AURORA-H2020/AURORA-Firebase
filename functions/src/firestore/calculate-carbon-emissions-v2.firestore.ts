@@ -21,10 +21,10 @@ initializeAppIfNeeded();
 const firestore = getFirestore();
 
 // The latest consumption version
-const latestConsumptionVersion = "1.0.1";
+const latestConsumptionVersion = "1.0.2";
 
 // The latest consumption summary version
-const latestConsumptionSummaryVersion = "1.0.0";
+const latestConsumptionSummaryVersion = "1.0.1";
 
 // Country to fall back to in case returned EF value is not a number
 const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
@@ -429,17 +429,20 @@ async function calculateTransportationConsumptionEmissions(
         };
       } else {
         let privateVehicleOccupancy = transportation.privateVehicleOccupancy;
-        if (!privateVehicleOccupancy) {
-          privateVehicleOccupancy = 1;
-        } else if (privateVehicleOccupancy > 2) {
-          if (transportationType in ["motorcycle", "electricMotorcycle"]) {
+        if (privateVehicleOccupancy && privateVehicleOccupancy > 0) {
+          // set privateVehicleOccupancy to 2 if motorcylce with occupancy over 2
+          if (transportationType in ["motorcycle", "electricMotorcycle"] && privateVehicleOccupancy > 2) {
             privateVehicleOccupancy = 2;
-          } else if (privateVehicleOccupancy > 5) {
-            privateVehicleOccupancy = 5;
-          } else {
-            privateVehicleOccupancy = 1;
           }
+          // set privateVehicleOccupancy to 5 if any other vehicle with occupancy over 5
+          else if (privateVehicleOccupancy > 5) {
+            privateVehicleOccupancy = 5;
+          }
+          // if none of these conditions are met, privateVehicleOccupancy remains unchanged
+        } else {
+          privateVehicleOccupancy = 1;
         }
+
         if (transportationType in metric.transportation && transportationType in metric.transportationEnergy) {
           return {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
