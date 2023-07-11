@@ -66,6 +66,7 @@ export const downloadUserData = onCall(async (request) => {
     )?.docs.map((doc) => doc.data()) ?? [];
   // Return data
   return {
+    userID: auth.uid,
     user: user,
     consumptions: consumptions,
     consumptionSummaries: consumptionSummaries,
