@@ -687,7 +687,7 @@ function updateConsumptionSummaryEntries(
     endDate = consumption.heating.endDate;
   } else if (consumption.transportation) {
     startDate = consumption.transportation.dateOfTravel;
-    endDate = consumption.transportation.dateOfTravel;
+    endDate = consumption.transportation.dateOfTravelEnd ?? consumption.transportation.dateOfTravel;
   } else {
     throw new Error("Consumption type cannot unknown for consumption:" + JSON.stringify(consumption));
   }
@@ -852,7 +852,7 @@ function ensure<T>(argument: T | undefined | null, message = "This value was pro
 }
 
 function normaliseNumbers(number: number, type: "percentage" | "number") {
-  const considerAsZero = 0.000001;
+  const considerAsZero = 0.0001;
   switch (type) {
     case "percentage": {
       if (number > 1) {
@@ -910,8 +910,8 @@ function calculateConsumptionLabel(
       let consumptionLabelFactor: number;
       // Set consumptionLabelFactor to fraction of 1 for transportation, as it cannot be prorated across the year like the other categories, up to 5 entries.
       if (categorySummary.category == "transportation") {
-        if (consumptionDaysCount <= 5) {
-          consumptionLabelFactor = consumptionDaysCount / 5;
+        if (consumptionDaysCount <= 10) {
+          consumptionLabelFactor = consumptionDaysCount / 10;
         } else {
           consumptionLabelFactor = 1;
         }

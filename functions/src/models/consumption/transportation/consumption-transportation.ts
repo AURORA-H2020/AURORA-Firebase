@@ -11,6 +11,10 @@ export interface ConsumptionTransportation {
    */
   dateOfTravel: Timestamp;
   /**
+   * The end date of the travel
+   */
+  dateOfTravelEnd?: Timestamp;
+  /**
    * The type of transportation
    */
   transportationType: ConsumptionTransportationType;
