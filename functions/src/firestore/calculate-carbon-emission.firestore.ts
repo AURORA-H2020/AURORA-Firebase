@@ -24,6 +24,11 @@ const firestore = getFirestore();
 export const calculateCarbonEmissions = onDocumentWritten(
   `${FirebaseConstants.collections.users.name}/{userId}/${FirebaseConstants.collections.users.consumptions.name}/{consumptionId}`,
   async (event) => {
+    if (event.params.userId === "uw6h1wRVOvbEg4xKW2lx6nFqueA3") {
+      // Return out of function
+      return;
+    }
+
     let isEdit = false;
     if (event.data?.after.exists && event.data?.before.exists) {
       // check if the user entered data hasn't changed (no edit)
