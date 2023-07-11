@@ -425,7 +425,7 @@ async function calculateTransportationConsumptionEmissions(
         let privateVehicleOccupancy = transportation.privateVehicleOccupancy;
         if (privateVehicleOccupancy && privateVehicleOccupancy > 0) {
           // set privateVehicleOccupancy to 2 if motorcylce with occupancy over 2
-          if (transportationType in ["motorcycle", "electricMotorcycle"] && privateVehicleOccupancy > 2) {
+          if (["motorcycle", "electricMotorcycle"].includes(transportationType) && privateVehicleOccupancy > 2) {
             privateVehicleOccupancy = 2;
           }
           // set privateVehicleOccupancy to 5 if any other vehicle with occupancy over 5
