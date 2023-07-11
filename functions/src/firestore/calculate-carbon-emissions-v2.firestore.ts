@@ -46,12 +46,6 @@ interface EventContext {
 export const calculateCarbonEmissionsV2 = onDocumentWritten(
   `${FirebaseConstants.collections.users.name}/{userId}/${FirebaseConstants.collections.users.consumptions.name}/{consumptionId}`,
   async (event) => {
-    // Check if user id does not match "Lars Lorenz" Account
-    // TODO: Remove this debug check when removing `calculateCarbonEmissions` cloud function
-    if (event.params.userId !== "uw6h1wRVOvbEg4xKW2lx6nFqueA3") {
-      // Return out of function
-      return;
-    }
     // Determine the consumption change event
     const consumptionChangeEvent = determineConsumptionChangeEvent(
       event.data?.before as DocumentSnapshot<Consumption> | undefined,
