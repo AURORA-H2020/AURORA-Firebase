@@ -13,6 +13,7 @@ export interface CountryMetric {
 
 export interface CountryMetricElectricity {
   default: number;
+  homePhotovoltaics: number;
 }
 
 export interface CountryMetricHeating {
