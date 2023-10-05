@@ -385,7 +385,13 @@ async function calculateElectricityConsumptionEmissions(
   const electricityEmissionFactor = await getCountryMetricValue(
     context.consumptionDate,
     context.user.country,
-    (metric) => metric.electricity.default
+    (metric) => {
+      if (electricity.electricitySource && metric.electricity && electricity.electricitySource in metric.electricity) {
+        return metric.electricity[electricity.electricitySource];
+      } else {
+        return metric.electricity.default;
+      }
+    }
   );
   const householdSize = electricity.householdSize ?? 1;
   return {
