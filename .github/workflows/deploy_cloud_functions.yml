@@ -27,7 +27,7 @@ jobs:
               ${{ runner.os }}-build-
               ${{ runner.os }}-
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools
+        run: npm install -g firebase-tools@12.4.8
       - name: Install Cloud Functions Dependencies
         run: npm ci
         working-directory: functions
