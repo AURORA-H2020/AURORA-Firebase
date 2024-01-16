@@ -509,7 +509,7 @@ async function getCountryMetricValue<Value>(
   // Retrieve value from metric
   const value = metric(countryMetric);
   // Check if value is available
-  if (value) {
+  if (typeof value === "number" && !isNaN(value)) {
     // Value is available
     return value;
   } else {
