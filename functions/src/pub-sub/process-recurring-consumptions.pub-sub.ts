@@ -11,9 +11,6 @@ initializeAppIfNeeded();
 // Initialize Firestore
 const firestore = getFirestore();
 
-// The default time zone.
-const defaultTimeZone = "Europe/Berlin";
-
 /**
  * [processRecurringConsumptions]
  * A Cloud Function which is triggered by a pub/sub every day at 00:05 to process all recurring consumptions of all users.
@@ -21,7 +18,7 @@ const defaultTimeZone = "Europe/Berlin";
  * and creates a corresponding consumption to the collection of the user.
  */
 export const processRecurringConsumptions = onSchedule(
-  { schedule: "every day 00:05", timeZone: defaultTimeZone },
+  { schedule: "every day 00:05", timeZone: "Europe/Berlin" },
   async () => {
     // Retrieve all enabled recurring consumptions
     const recurringConsumptions = await firestore
@@ -65,14 +62,14 @@ export const processRecurringConsumptions = onSchedule(
 /**
  * Retrieve the current date in a given time zone.
  * @param time The optional time information.
- * @param timeZone The time zone. Default value `Europe/Berlin`
+ * @param timeZone The time zone. Default value `UTC`
  */
-function getCurrentDate(time?: { hours: number; minutes: number }, timeZone = defaultTimeZone): Date {
-  const currentDate = new Date(new Date().toLocaleString("en-US", { timeZone: timeZone }));
+function getCurrentDate(time?: { hours: number; minutes: number }, timeZone = "UTC"): Date {
+  const date = new Date();
   if (time) {
-    currentDate.setUTCHours(time.hours, time.minutes, 0, 0);
+    date.setUTCHours(time.hours, time.minutes, 0, 0);
   }
-  return currentDate;
+  return new Date(date.toLocaleString("en-US", { timeZone: timeZone, hour12: false }));
 }
 
 /**
