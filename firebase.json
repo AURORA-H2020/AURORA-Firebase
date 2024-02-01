@@ -20,11 +20,24 @@
   ],
   "emulators": {
     "firestore": {
-      "host": "127.0.0.1",
+      "host": "localhost",
       "port": 8080
+    },
+    "functions": {
+      "port": 5001
     },
     "ui": {
       "enabled": true
-    }
+    },
+    "storage": {
+      "port": 9199
+    },
+    "pubsub": {
+      "port": 8085
+    },
+    "singleProjectMode": true
+  },
+  "storage": {
+    "rules": "security-rules/firestore.rules"
   }
 }

@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{path}/{allPaths=**} {
+
+      // Only allow reads for the "dashboard-data" and "country-data" directories
+      allow read: if path == 'dashboard-data';
+      allow read: if path == 'country-data';
+    }
+  }
+}
