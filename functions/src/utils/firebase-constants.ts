@@ -25,5 +25,8 @@ export const FirebaseConstants = {
         name: "recurring-consumptions",
       },
     },
+    misc: {
+      name: "misc",
+    },
   },
 };

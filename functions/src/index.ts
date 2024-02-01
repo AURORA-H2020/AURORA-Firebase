@@ -18,6 +18,7 @@ export * from "./firestore/calculate-carbon-emissions-v2.firestore";
  * HTTPS Cloud Functions
  */
 export * from "./https/download-user-data.https-callable";
+export * from "./https/export-user-data.https-callable";
 
 /**
  * Pub/Sub Cloud Functions
