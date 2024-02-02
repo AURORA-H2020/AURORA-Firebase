@@ -29,4 +29,17 @@ export const FirebaseConstants = {
       name: "_export-user-data-blacklisted-users",
     },
   },
+  buckets: {
+    auroraDashboard: {
+      name: "aurora-dashboard",
+      folders: {
+        dashboardData: {
+          name: "dashboard-data",
+        },
+        countryData: {
+          name: "country-data",
+        },
+      },
+    },
+  },
 };

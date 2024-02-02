@@ -445,9 +445,12 @@ export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone
     const currentUnixTime = new Date().getTime().toString();
 
     // Create a file in the bucket and write the transformed users data to it
-    const transformedUserDataFile = storage()
-      .bucket("dashboard-data")
-      .file(`summarised-export-${currentUnixTime}.json`);
+    const folderName = FirebaseConstants.buckets.auroraDashboard.folders.countryData.name; // Replace with your folder name
+    const fileName = `summarised-export-${currentUnixTime}.json`;
+    const filePath = `${folderName}/${fileName}`;
+
+    const transformedUserDataFile = storage().bucket(FirebaseConstants.buckets.auroraDashboard.name).file(filePath);
+
     await transformedUserDataFile.save(JSON.stringify(transformedUserData));
 
     // Create a file in the bucket and write the full users data to it
