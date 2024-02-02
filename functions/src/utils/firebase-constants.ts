@@ -25,8 +25,8 @@ export const FirebaseConstants = {
         name: "recurring-consumptions",
       },
     },
-    misc: {
-      name: "misc",
+    exportUserDataBlacklistedUsers: {
+      name: "_export-user-data-blacklisted-users",
     },
   },
 };

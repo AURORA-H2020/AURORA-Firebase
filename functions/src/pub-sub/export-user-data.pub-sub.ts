@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { storage } from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
-// import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onCall } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import { Consumption } from "../models/consumption/consumption";
 import { ConsumptionCategory } from "../models/consumption/consumption-category";
@@ -15,7 +14,6 @@ import { GlobalSummaryCity } from "../models/global-summary/city/global-summary-
 import { GlobalSummaryCountry } from "../models/global-summary/country/global-summary-country";
 import { GlobalSummary } from "../models/global-summary/global-summary";
 import { CategoryLabel, Label } from "../models/global-summary/label/consumption-type-labels";
-import { FirebaseConfig } from "../models/misc/config";
 import { RecurringConsumption } from "../models/recurring-consumption/recurring-consumption";
 import { User } from "../models/user/user";
 import { FirebaseConstants } from "../utils/firebase-constants";
@@ -393,24 +391,20 @@ function newSummaryMonth(currentMonth: number): GlobalSummaryCategoryTemporalMon
 
 /**
  * [exportUserData]
- * A HTTPS Callable Cloud Function.
- * This functions creates an extract of all Firestore documents within the user collection,
- * anonymises the data, and returns a JSON object containing the relevant information.
+ * A Cloud Function which is triggered by a pub/sub every day at 00:30.
+ * It creates an extract of all Firestore documents within the user collection,
+ * summarises the data, and uploads a JSON object to a cloud bucket.
  */
-// export const createDataExtract = onSchedule({ schedule: "every day 00:05", timeZone: "Europe/Berlin" }, async () => {
-export const exportUserData = onCall(async () => {
+export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone: "Europe/Berlin" }, async () => {
   try {
     const usersSnapshot = await firestore.collection(FirebaseConstants.collections.users.name).get();
     const consolidatedUsers: ConsolidatedUsers = {};
 
-    const firebaseConfig = (
-      await firestore.collection(FirebaseConstants.collections.misc.name).doc("config").get()
-    ).data() as FirebaseConfig;
+    const firebaseConfig = await firestore
+      .collection(FirebaseConstants.collections.exportUserDataBlacklistedUsers.name)
+      .get();
 
-    const userIdBlacklist = [
-      ...(firebaseConfig?.blacklist?.devAccounts || []),
-      ...(firebaseConfig?.blacklist?.users || []),
-    ];
+    const userIdBlacklist = firebaseConfig.docs.map((doc) => doc.id);
 
     for (const doc of usersSnapshot.docs) {
       const userId = doc.id;
@@ -434,6 +428,8 @@ export const exportUserData = onCall(async () => {
         (doc) => doc.data() as ConsumptionSummary
       );
 
+      // Recurring consumptions are currently not needed for the summarised export
+      /*
       const recurringConsumptionsSnapshot = await firestore
         .collection(FirebaseConstants.collections.users.name)
         .doc(userId)
@@ -442,6 +438,7 @@ export const exportUserData = onCall(async () => {
       consolidatedUsers[userId].recurringConsumptions = recurringConsumptionsSnapshot.docs.map(
         (doc) => doc.data() as RecurringConsumption
       );
+      */
     }
 
     const transformedUserData = transformUserData(consolidatedUsers, userIdBlacklist);
@@ -454,8 +451,11 @@ export const exportUserData = onCall(async () => {
     await transformedUserDataFile.save(JSON.stringify(transformedUserData));
 
     // Create a file in the bucket and write the full users data to it
+    // Currently not used
+    /*
     const fullUserDataFile = storage().bucket("users-exports").file(`uses-export-${currentUnixTime}.json`);
     await fullUserDataFile.save(JSON.stringify(consolidatedUsers));
+    */
   } catch (error) {
     throw new Error(`Error exporting users data: ${error}`);
   }

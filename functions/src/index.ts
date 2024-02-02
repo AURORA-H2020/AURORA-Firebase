@@ -18,9 +18,9 @@ export * from "./firestore/calculate-carbon-emissions-v2.firestore";
  * HTTPS Cloud Functions
  */
 export * from "./https/download-user-data.https-callable";
-export * from "./https/export-user-data.https-callable";
 
 /**
  * Pub/Sub Cloud Functions
  */
 export * from "./pub-sub/process-recurring-consumptions.pub-sub";
+export * from "./pub-sub/export-user-data.pub-sub";
