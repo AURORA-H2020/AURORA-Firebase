@@ -42,7 +42,7 @@ interface ConsolidatedUsers {
  */
 function transformUserData(userDataMap: ConsolidatedUsers, userIdBlacklist: string[]): GlobalSummary {
   const globalSummary: GlobalSummary = {
-    date: new Date().getTime() / 1000,
+    date: new Date().getTime(),
     daysPeriod: 1,
     countries: [],
   };
