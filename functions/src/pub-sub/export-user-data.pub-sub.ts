@@ -428,8 +428,7 @@ export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone
         (doc) => doc.data() as ConsumptionSummary
       );
 
-      // Recurring consumptions are currently not needed for the summarised export
-      /*
+      // Recurring consumptions are currently not needed for the summarised export, but included in the backup
       const recurringConsumptionsSnapshot = await firestore
         .collection(FirebaseConstants.collections.users.name)
         .doc(userId)
@@ -438,29 +437,35 @@ export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone
       consolidatedUsers[userId].recurringConsumptions = recurringConsumptionsSnapshot.docs.map(
         (doc) => doc.data() as RecurringConsumption
       );
-      */
     }
 
     const transformedUserData = transformUserData(consolidatedUsers, userIdBlacklist);
-    const currentUnixTime = new Date().getTime().toString();
+
+    // Get time from transformedUserData to ensure same timestamp on export
+    const currentUnixTime = transformedUserData.date;
 
     // Create a file in the bucket and write the transformed users data to it
-    const folderName = FirebaseConstants.buckets.auroraDashboard.folders.dashboardData.name; // Replace with your folder name
-    const fileName = `summarised-export-${currentUnixTime}.json`;
-    const filePath = `${folderName}/${fileName}`;
+    const summaryFolderName = FirebaseConstants.buckets.auroraDashboard.folders.dashboardData.name;
+    const summaryFileName = `summarised-export-${currentUnixTime}.json`;
+    const summaryFilePath = `${summaryFolderName}/${summaryFileName}`;
 
-    const transformedUserDataFile = storage().bucket(FirebaseConstants.buckets.auroraDashboard.name).file(filePath);
+    const transformedUserDataFile = storage()
+      .bucket(FirebaseConstants.buckets.auroraDashboard.name)
+      .file(summaryFilePath);
 
     await transformedUserDataFile.save(JSON.stringify(transformedUserData)).then(() => {
-      console.log(`Successfully exported summarised user data to ${filePath}`);
+      console.log(`Successfully exported summarised user data to ${summaryFilePath}`);
     });
 
     // Create a file in the bucket and write the full users data to it
-    // Currently not used
-    /*
-    const fullUserDataFile = storage().bucket("users-exports").file(`uses-export-${currentUnixTime}.json`);
-    await fullUserDataFile.save(JSON.stringify(consolidatedUsers));
-    */
+    const backupFolderName = FirebaseConstants.buckets.default.folders.userDataBackup.name;
+    const backupFileName = `users-backup-${currentUnixTime}.json`;
+    const backupFilePath = `${backupFolderName}/${backupFileName}`;
+
+    const fullUserDataFile = storage().bucket(FirebaseConstants.buckets.default.name).file(backupFilePath);
+    await fullUserDataFile.save(JSON.stringify(consolidatedUsers)).then(() => {
+      console.log(`Successfully exported user data to ${backupFilePath}`);
+    });
   } catch (error) {
     throw new Error(`Error exporting users data: ${error}`);
   }
