@@ -8,7 +8,7 @@ export interface ConsumptionElectricity {
   /**
    * The costs
    */
-  costs: number;
+  costs?: number;
   /**
    * The size of the household
    */

@@ -1,3 +1,5 @@
+import { RecurringConsumptionFrequencyUnit } from "./recurring-consumption-frequency-unit";
+
 /**
  * A recurring consumption frequency
  */
@@ -5,7 +7,7 @@ export interface RecurringConsumptionFrequency {
   /**
    * The unit
    */
-  unit: "daily" | "weekly" | "monthly";
+  unit: RecurringConsumptionFrequencyUnit;
   /**
    * The weekdays.
    * Applicable if unit is set to `weekly`
