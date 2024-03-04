@@ -35,7 +35,10 @@
     "pubsub": {
       "port": 8085
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "auth": {
+      "port": 9099
+    }
   },
   "storage": {
     "rules": "security-rules/firestore.rules"
