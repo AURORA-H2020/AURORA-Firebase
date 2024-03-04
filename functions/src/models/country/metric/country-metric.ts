@@ -13,23 +13,32 @@ export interface CountryMetric {
 
 export interface CountryMetricElectricity {
   default: number;
+  defaultGreenProvider: number;
   homePhotovoltaics: number;
 }
 
+export interface CountryMetricHeatingEntry {
+  carbon: number;
+  energy: number;
+  unit: "kWh" | "kg" | "l";
+}
+
 export interface CountryMetricHeating {
-  biomass: number;
-  coal: number;
-  default: number;
-  district: number;
-  districtDefault: number;
-  electric: number;
-  geothermal: number;
-  liquifiedPetroGas: number;
-  locallyProducedBiomass: number;
-  naturalGas: number;
-  oil: number;
-  solarThermal: number;
-  wasteTreatment: number;
+  biomass: CountryMetricHeatingEntry;
+  coal: CountryMetricHeatingEntry;
+  default: CountryMetricHeatingEntry;
+  district: CountryMetricHeatingEntry;
+  districtDefault: CountryMetricHeatingEntry;
+  electric: CountryMetricHeatingEntry;
+  geothermal: CountryMetricHeatingEntry;
+  liquifiedPetroGas: CountryMetricHeatingEntry;
+  locallyProducedBiomass: CountryMetricHeatingEntry;
+  naturalGas: CountryMetricHeatingEntry;
+  oil: CountryMetricHeatingEntry;
+  solarThermal: CountryMetricHeatingEntry;
+  wasteTreatment: CountryMetricHeatingEntry;
+  firewood: CountryMetricHeatingEntry;
+  butane: CountryMetricHeatingEntry;
 }
 
 export interface CountryMetricTransportation {

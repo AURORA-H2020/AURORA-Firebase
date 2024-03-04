@@ -10,6 +10,10 @@ export interface RecurringConsumptionTransportation {
    */
   transportationType: ConsumptionTransportationType;
   /**
+   * The fuel consumption
+   */
+  fuelConsumption?: number;
+  /**
    * The occupancy of a private vehicle
    */
   privateVehicleOccupancy?: number;

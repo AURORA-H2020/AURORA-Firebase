@@ -17,6 +17,8 @@ export type ConsumptionTransportationType =
   | "dieselPassengerTrain"
   | "highSpeedTrain"
   | "plane"
+  | "planeIntraEu"
+  | "planeExtraEu"
   | "electricBike"
   | "electricScooter"
   | "bike"

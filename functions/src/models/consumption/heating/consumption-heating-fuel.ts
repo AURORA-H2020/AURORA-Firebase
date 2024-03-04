@@ -4,6 +4,8 @@
 export type ConsumptionHeatingFuel =
   | "oil"
   | "naturalGas"
+  | "firewood"
+  | "butane"
   | "liquifiedPetroGas"
   | "biomass"
   | "locallyProducedBiomass"

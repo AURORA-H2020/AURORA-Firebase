@@ -8,7 +8,7 @@ export interface ConsumptionElectricity {
   /**
    * The costs
    */
-  costs: number;
+  costs?: number;
   /**
    * The size of the household
    */
@@ -17,7 +17,11 @@ export interface ConsumptionElectricity {
    * The electricity type
    * Optional to support legacy consumptions before this property was introduced
    */
-  electricitySource: ConsumptionElectricitySource;
+  electricitySource?: ConsumptionElectricitySource;
+  /**
+   * The exported electricity for home PV
+   */
+  electricityExported?: number;
   /**
    * The start date
    */

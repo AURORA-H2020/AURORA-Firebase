@@ -9,7 +9,7 @@ export interface ConsumptionHeating {
   /**
    * The costs
    */
-  costs: number;
+  costs?: number;
   /**
    * The size of the household
    */
