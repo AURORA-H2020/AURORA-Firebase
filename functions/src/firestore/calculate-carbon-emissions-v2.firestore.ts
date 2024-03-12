@@ -4,7 +4,7 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { User } from "../models/user/user";
 import { Consumption } from "../models/consumption/consumption";
-import { CountryMetric } from "../models/country/metric/country-metric";
+import { CountryMetric, CountryMetricHeatingEntry } from "../models/country/metric/country-metric";
 import { ConsumptionHeating } from "../models/consumption/heating/consumption-heating";
 import { ConsumptionElectricity } from "../models/consumption/electricity/consumption-electricity";
 import { ConsumptionTransportation } from "../models/consumption/transportation/consumption-transportation";
@@ -341,35 +341,43 @@ async function calculateHeatingConsumptionEmissions(
   heating: ConsumptionHeating,
   context: CalculateConsumptionEmissionsContext
 ): Promise<CalculateConsumptionEmissionsResult> {
-  const heatingEmissionFactor = await getCountryMetricValue(context.consumptionDate, context.user.country, (metric) => {
-    switch (heating.heatingFuel) {
-      case "electric": {
-        // If the user has selected "Electric Heating", the electricity values will be used.
-        return metric.electricity.default;
-      }
-      case "district": {
-        if (heating.districtHeatingSource === "electric") {
-          return metric.electricity.default;
-        } else if (heating.districtHeatingSource && metric.heating && heating.districtHeatingSource in metric.heating) {
-          return metric.heating[heating.districtHeatingSource];
-        } else {
-          return undefined;
+  const heatingFactors: CountryMetricHeatingEntry | undefined = await getCountryMetricValue(
+    context.consumptionDate,
+    context.user.country,
+    (metric) => {
+      switch (heating.heatingFuel) {
+        case "electric": {
+          // If the user has selected "Electric Heating", the electricity values will be used.
+          return { carbon: metric.electricity.default, energy: 1, unit: "kWh" };
         }
-      }
-      // If consumption has any other type of heating, simply look the Emission Factor up.
-      default: {
-        if (metric.heating && heating.heatingFuel in metric.heating) {
-          return metric.heating[heating.heatingFuel];
-        } else {
-          return undefined;
+        case "district": {
+          if (heating.districtHeatingSource === "electric") {
+            return { carbon: metric.electricity.default, energy: 1, unit: "kWh" };
+          } else if (
+            heating.districtHeatingSource &&
+            metric.heating &&
+            heating.districtHeatingSource in metric.heating
+          ) {
+            return metric.heating[heating.districtHeatingSource];
+          } else {
+            return undefined;
+          }
+        }
+        // If consumption has any other type of heating, simply look the Emission Factor up.
+        default: {
+          if (metric.heating && heating.heatingFuel in metric.heating) {
+            return metric.heating[heating.heatingFuel];
+          } else {
+            return undefined;
+          }
         }
       }
     }
-  });
+  );
   const householdSize = heating.householdSize ?? 1;
   return {
-    carbonEmission: (context.consumption.value / householdSize) * heatingEmissionFactor,
-    energyExpended: context.consumption.value / householdSize,
+    carbonEmission: (context.consumption.value / householdSize) * (heatingFactors.carbon ?? 0),
+    energyExpended: (context.consumption.value / householdSize) * (heatingFactors.energy ?? 0),
   };
 }
 
@@ -394,6 +402,16 @@ async function calculateElectricityConsumptionEmissions(
     }
   );
   const householdSize = electricity.householdSize ?? 1;
+
+  // If the user has homePhotovoltaics, and exported energy, the electricity exported will be subtracted from the total electricity consumption.
+  if (electricity.electricitySource === "homePhotovoltaics" && context.consumption.electricity?.electricityExported) {
+    return {
+      carbonEmission:
+        ((context.consumption.value - context.consumption.electricity.electricityExported) / householdSize) *
+        electricityEmissionFactor,
+      energyExpended: (context.consumption.value - context.consumption.electricity.electricityExported) / householdSize,
+    };
+  }
   return {
     carbonEmission: (context.consumption.value / householdSize) * electricityEmissionFactor,
     energyExpended: context.consumption.value / householdSize,
@@ -438,7 +456,7 @@ async function calculateTransportationConsumptionEmissions(
           else if (privateVehicleOccupancy > 5) {
             privateVehicleOccupancy = 5;
           }
-          // if none of these conditions are met, privateVehicleOccupancy remains unchanged
+          // if none of these conditions are met, privateVehicleOccupancy is set to 1
         } else {
           privateVehicleOccupancy = 1;
         }
@@ -456,20 +474,13 @@ async function calculateTransportationConsumptionEmissions(
       }
     }
   );
-  if (transportation.transportationType === "plane") {
-    // Only if transportation type is "plane", return just the Emission Factor, as it is constant
-    return {
-      carbonEmission: transportationEmissionsFactor.carbon,
-      energyExpended: transportationEmissionsFactor.energy,
-    };
-  } else {
-    // For all other transportation types: Transport Emission Factor is in kg CO2 per km,
-    // so it is just multiplied with the value given in kilometer.
-    return {
-      carbonEmission: context.consumption.value * transportationEmissionsFactor.carbon,
-      energyExpended: context.consumption.value * transportationEmissionsFactor.energy,
-    };
-  }
+
+  // Transport Emission Factor is in kg CO2 per km,
+  // so it is just multiplied with the value given in kilometer.
+  return {
+    carbonEmission: context.consumption.value * transportationEmissionsFactor.carbon,
+    energyExpended: context.consumption.value * transportationEmissionsFactor.energy,
+  };
 }
 
 /**
