@@ -4,7 +4,11 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { User } from "../models/user/user";
 import { Consumption } from "../models/consumption/consumption";
-import { CountryMetric, CountryMetricHeatingEntry } from "../models/country/metric/country-metric";
+import {
+  CountryMetric,
+  CountryMetricHeatingEntry,
+  CountryMetricTransportationEntry,
+} from "../models/country/metric/country-metric";
 import { ConsumptionHeating } from "../models/consumption/heating/consumption-heating";
 import { ConsumptionElectricity } from "../models/consumption/electricity/consumption-electricity";
 import { ConsumptionTransportation } from "../models/consumption/transportation/consumption-transportation";
@@ -433,18 +437,11 @@ async function calculateTransportationConsumptionEmissions(
     (metric) => {
       const transportationType = transportation.transportationType;
       const publicVehicleOccupancy = transportation.publicVehicleOccupancy;
-      if (
-        publicVehicleOccupancy &&
-        transportationType &&
-        transportationType in metric.transportation &&
-        transportationType in metric.transportationEnergy
-      ) {
-        return {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          carbon: (metric.transportation as any)[transportationType][publicVehicleOccupancy],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          energy: (metric.transportationEnergy as any)[transportationType][publicVehicleOccupancy],
-        };
+      if (publicVehicleOccupancy && transportationType && transportationType in metric.transportation) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (metric.transportation as any)[transportationType][
+          publicVehicleOccupancy
+        ] as CountryMetricTransportationEntry;
       } else {
         let privateVehicleOccupancy = transportation.privateVehicleOccupancy;
         if (privateVehicleOccupancy && privateVehicleOccupancy > 0) {
@@ -461,13 +458,11 @@ async function calculateTransportationConsumptionEmissions(
           privateVehicleOccupancy = 1;
         }
 
-        if (transportationType in metric.transportation && transportationType in metric.transportationEnergy) {
-          return {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            carbon: (metric.transportation as any)[transportationType][String(privateVehicleOccupancy)],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            energy: (metric.transportationEnergy as any)[transportationType][String(privateVehicleOccupancy)],
-          };
+        if (transportationType in metric.transportation) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return (metric.transportation as any)[transportationType][
+            String(privateVehicleOccupancy)
+          ] as CountryMetricTransportationEntry;
         } else {
           return undefined;
         }
@@ -475,7 +470,7 @@ async function calculateTransportationConsumptionEmissions(
     }
   );
 
-  // Transport Emission Factor is in kg CO2 per km,
+  // Transport Emission Factor is in kg CO2 or kWh per km,
   // so it is just multiplied with the value given in kilometer.
   return {
     carbonEmission: context.consumption.value * transportationEmissionsFactor.carbon,

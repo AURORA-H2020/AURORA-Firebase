@@ -8,7 +8,6 @@ export interface CountryMetric {
   electricity: CountryMetricElectricity;
   heating: CountryMetricHeating;
   transportation: CountryMetricTransportation;
-  transportationEnergy: CountryMetricTransportation;
 }
 
 export interface CountryMetricElectricity {
@@ -41,94 +40,105 @@ export interface CountryMetricHeating {
   butane: CountryMetricHeatingEntry;
 }
 
+export interface CountryMetricTransportationEntry {
+  carbon: number;
+  energy: number;
+}
+
 export interface CountryMetricTransportation {
   fuelCar: {
-    1?: number;
-    2?: number;
-    3?: number;
-    4?: number;
-    5?: number;
+    1: CountryMetricTransportationEntry;
+    2: CountryMetricTransportationEntry;
+    3: CountryMetricTransportationEntry;
+    4: CountryMetricTransportationEntry;
+    5: CountryMetricTransportationEntry;
   };
   electricCar: {
-    1: number;
-    2: number;
-    3: number;
-    4: number;
-    5: number;
+    1: CountryMetricTransportationEntry;
+    2: CountryMetricTransportationEntry;
+    3: CountryMetricTransportationEntry;
+    4: CountryMetricTransportationEntry;
+    5: CountryMetricTransportationEntry;
   };
   hybridCar: {
-    1: number;
-    2: number;
-    3: number;
-    4: number;
-    5: number;
+    1: CountryMetricTransportationEntry;
+    2: CountryMetricTransportationEntry;
+    3: CountryMetricTransportationEntry;
+    4: CountryMetricTransportationEntry;
+    5: CountryMetricTransportationEntry;
   };
   motorcycle: {
-    1: number;
-    2: number;
+    1: CountryMetricTransportationEntry;
+    2: CountryMetricTransportationEntry;
   };
   electricMotorcycle: {
-    1: number;
-    2: number;
+    1: CountryMetricTransportationEntry;
+    2: CountryMetricTransportationEntry;
   };
   electricBus: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   hybridElectricBus: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   alternativeFuelBus: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   dieselBus: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   otherBus: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   metroTramOrUrbanLightTrain: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   electricPassengerTrain: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   dieselPassengerTrain: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   highSpeedTrain: {
-    almostEmpty: number;
-    medium: number;
-    nearlyFull: number;
+    almostEmpty: CountryMetricTransportationEntry;
+    medium: CountryMetricTransportationEntry;
+    nearlyFull: CountryMetricTransportationEntry;
   };
   plane: {
-    1: number;
+    1: CountryMetricTransportationEntry;
+  };
+  planeExtraEu: {
+    1: CountryMetricTransportationEntry;
+  };
+  planeIntraEu: {
+    1: CountryMetricTransportationEntry;
   };
   electricBike: {
-    1: number;
+    1: CountryMetricTransportationEntry;
   };
   electricScooter: {
-    1: number;
+    1: CountryMetricTransportationEntry;
   };
   bike: {
-    1: number;
+    1: CountryMetricTransportationEntry;
   };
   walking: {
-    1: number;
+    1: CountryMetricTransportationEntry;
   };
 }
