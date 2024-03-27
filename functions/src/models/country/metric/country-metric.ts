@@ -141,4 +141,8 @@ export interface CountryMetricTransportation {
   walking: {
     1: CountryMetricTransportationEntry;
   };
+  customFuel: {
+    regular: number;
+    electric: number;
+  };
 }

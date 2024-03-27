@@ -153,6 +153,7 @@ function makeConsumption(recurringConsumption: RecurringConsumption): Consumptio
             getCurrentDate({ hours: transportation.hourOfTravel, minutes: transportation.minuteOfTravel })
           ),
           transportationType: transportation.transportationType,
+          fuelConsumption: transportation.fuelConsumption,
           privateVehicleOccupancy: transportation.privateVehicleOccupancy,
           publicVehicleOccupancy: transportation.publicVehicleOccupancy,
         },

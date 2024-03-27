@@ -444,7 +444,7 @@ async function calculateTransportationConsumptionEmissions(
         ] as CountryMetricTransportationEntry;
       } else {
         let privateVehicleOccupancy = transportation.privateVehicleOccupancy;
-        if (privateVehicleOccupancy && privateVehicleOccupancy > 0) {
+        if (privateVehicleOccupancy && privateVehicleOccupancy > 0 && !transportation.fuelConsumption) {
           // set privateVehicleOccupancy to 2 if motorcylce with occupancy over 2
           if (["motorcycle", "electricMotorcycle"].includes(transportationType) && privateVehicleOccupancy > 2) {
             privateVehicleOccupancy = 2;
@@ -458,7 +458,32 @@ async function calculateTransportationConsumptionEmissions(
           privateVehicleOccupancy = 1;
         }
 
-        if (transportationType in metric.transportation) {
+        if (transportationType in metric.transportation && transportation.fuelConsumption) {
+          const fuelConsumption = transportation.fuelConsumption;
+          const passengers = transportation.privateVehicleOccupancy ?? 1;
+
+          switch (transportationType) {
+            case "electricBike":
+            case "electricCar":
+              return {
+                carbon: (metric.transportation.customFuel.electric * (fuelConsumption / 100)) / passengers,
+                energy: fuelConsumption / 100 / passengers,
+              };
+            case "hybridCar":
+              return {
+                carbon:
+                  (metric.transportation.customFuel.electric * (fuelConsumption / 10) * 0.5 +
+                    metric.transportation.customFuel.regular * (fuelConsumption / 10) * 0.5) /
+                  passengers,
+                energy: fuelConsumption / 10 / passengers,
+              };
+            default:
+              return {
+                carbon: (metric.transportation.customFuel.regular * (fuelConsumption / 10)) / passengers,
+                energy: fuelConsumption / 10 / passengers,
+              };
+          }
+        } else if (transportationType in metric.transportation) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return (metric.transportation as any)[transportationType][
             String(privateVehicleOccupancy)
