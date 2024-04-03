@@ -35,6 +35,8 @@ interface ConsolidatedUsers {
   [userId: string]: UserWithSubCollections;
 }
 
+type AnonymisedUser = Omit<UserWithSubCollections, "firstName" | "lastName">;
+
 /**
  * Transforms the provided export data into a summary object.
  * @param {ConsolidatedUsers} userDataMap - The source data to transform.
@@ -390,6 +392,58 @@ function newSummaryMonth(currentMonth: number): GlobalSummaryCategoryTemporalMon
 }
 
 /**
+ * Anonymises the user data by removing the first and last names from the user objects.
+ *
+ * @param {ConsolidatedUsers} userData - The data of all users to be anonymised.
+ * @return {Record<string, AnonymisedUser>} - The anonymised user data.
+ */
+function anonymiseUserData(userData: ConsolidatedUsers): Record<string, AnonymisedUser> {
+  const anonymisedData: Record<string, AnonymisedUser> = {};
+
+  Object.keys(userData).forEach((userID) => {
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    const {
+      firstName,
+      lastName,
+      consumptions,
+      recurringConsumptions,
+      isMarketingConsentAllowed,
+      acceptedLegalDocumentVersion,
+      ...userWithoutNames
+    } = userData[userID];
+    /* eslint-enable @typescript-eslint/no-unused-vars */
+
+    let anonymisedConsumptions: Consumption[] = [];
+
+    if (consumptions && consumptions.length > 0) {
+      anonymisedConsumptions = consumptions.map((consumptionData) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { description, ...consumptionWithoutDescription } = consumptionData;
+        return consumptionWithoutDescription;
+      });
+    }
+
+    let anonymisedRecurringConsumptions: RecurringConsumption[] = [];
+
+    if (recurringConsumptions && recurringConsumptions.length > 0) {
+      anonymisedRecurringConsumptions = recurringConsumptions.map((recurringConsumptionData) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { description, ...consumptionWithoutDescription } = recurringConsumptionData;
+        return consumptionWithoutDescription;
+      });
+    }
+
+    anonymisedData[userID] = {
+      ...userWithoutNames,
+      consumptions: anonymisedConsumptions,
+      recurringConsumptions: anonymisedRecurringConsumptions,
+    };
+  });
+
+  return anonymisedData;
+}
+
+/**
  * [exportUserData]
  * A Cloud Function which is triggered by a pub/sub every day at 00:30.
  * It creates an extract of all Firestore documents within the user collection,
@@ -457,13 +511,17 @@ export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone
       console.log(`Successfully exported summarised user data to ${summaryFilePath}`);
     });
 
+    // Anonymise user data
+    const anonymisedUserData = anonymiseUserData(consolidatedUsers);
+    console.log(anonymisedUserData);
+
     // Create a file in the bucket and write the full users data to it
     const backupFolderName = FirebaseConstants.buckets.default.folders.userDataBackup.name;
     const backupFileName = `users-backup-${currentUnixTime}.json`;
     const backupFilePath = `${backupFolderName}/${backupFileName}`;
 
     const fullUserDataFile = storage().bucket(FirebaseConstants.buckets.default.name).file(backupFilePath);
-    await fullUserDataFile.save(JSON.stringify(consolidatedUsers)).then(() => {
+    await fullUserDataFile.save(JSON.stringify(anonymisedUserData)).then(() => {
       console.log(`Successfully exported user data to ${backupFilePath}`);
     });
   } catch (error) {
