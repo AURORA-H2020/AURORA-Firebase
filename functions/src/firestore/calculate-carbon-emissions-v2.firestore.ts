@@ -25,7 +25,7 @@ initializeAppIfNeeded();
 const firestore = getFirestore();
 
 // The latest consumption version
-const latestConsumptionVersion = "1.0.2";
+const latestConsumptionVersion = "1.1.0";
 
 // The latest consumption summary version
 const latestConsumptionSummaryVersion = "1.0.1";
