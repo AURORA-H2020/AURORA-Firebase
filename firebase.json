@@ -40,7 +40,10 @@
       "port": 9099
     }
   },
-  "storage": {
-    "rules": "security-rules/firestore.rules"
-  }
+  "storage": [
+    {
+      "bucket": "aurora-dashboard",
+      "rules": "security-rules/storage-aurora-dashboard.rules"
+    }
+  ]
 }

@@ -10,6 +10,9 @@ service firebase.storage {
       // Only allow reads for the "dashboard-data" and "country-data" directories
       allow read: if path == 'dashboard-data';
       allow read: if path == 'country-data';
+
+      // Allow read for admin users
+      allow read: if path == 'user-data-backup' && firestore.get(/databases/(default)/documents/user-roles/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }

@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'security-rules/**'
+      - "security-rules/**"
 
 jobs:
   deploy:
@@ -17,10 +17,12 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.2.0
         with:
           ref: ${{ github.ref }}
-          check-name: 'Test Firestore Rules'
+          check-name: "Test Firestore Rules"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v3
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
       - name: Deploy Firestore Rules to Firebase
         run: firebase deploy --force --only firestore:rules --non-interactive --token ${{ secrets.FIREBASE_TOKEN }}
+      - name: Deploy Storage Rules to Firebase
+        run: firebase deploy --force --only storage --non-interactive --token ${{ secrets.FIREBASE_TOKEN }}
