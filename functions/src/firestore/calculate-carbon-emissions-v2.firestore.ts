@@ -25,10 +25,10 @@ initializeAppIfNeeded();
 const firestore = getFirestore();
 
 // The latest consumption version
-const latestConsumptionVersion = "1.1.0";
+const latestConsumptionVersion = "1.1.1";
 
 // The latest consumption summary version
-const latestConsumptionSummaryVersion = "1.0.1";
+const latestConsumptionSummaryVersion = "1.0.2";
 
 // Country to fall back to in case returned EF value is not a number
 const metricsFallbackCountry = "sPXh74wjZf14Jtmkaas6";
