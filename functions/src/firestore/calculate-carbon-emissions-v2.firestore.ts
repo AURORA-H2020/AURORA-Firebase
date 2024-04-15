@@ -883,19 +883,19 @@ function ensure<T>(argument: T | undefined | null, message = "This value was pro
 }
 
 function normaliseNumbers(number: number, type: "percentage" | "number") {
-  const considerAsZero = 0.0001;
+  const considerAsZero = { upperLimit: 0.0001, lowerLimit: -0.0001 };
   switch (type) {
     case "percentage": {
       if (number > 1) {
         return 1;
-      } else if (number < considerAsZero) {
+      } else if (number < considerAsZero.upperLimit) {
         return 0;
       } else {
         return number;
       }
     }
     case "number": {
-      if (number < considerAsZero) {
+      if (number < considerAsZero.upperLimit && number > considerAsZero.lowerLimit) {
         return 0;
       } else {
         return number;
@@ -964,8 +964,9 @@ function calculateConsumptionLabel(
       let foundCarbonEmissionLabel = false;
       for (const carbonEmissionLabel of carbonEmissionCategoryLabels) {
         if (
-          carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
-          carbonEmissionLabel.minimum <= categorySummary.carbonEmission.total &&
+          ((carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
+            carbonEmissionLabel.minimum <= categorySummary.carbonEmission.total) ||
+            (carbonEmissionLabel.minimum == 0 && categorySummary.carbonEmission.total < carbonEmissionLabel.minimum)) &&
           consumptionDaysCount > 0
         ) {
           categorySummary.carbonEmission.label = carbonEmissionLabel.label;
