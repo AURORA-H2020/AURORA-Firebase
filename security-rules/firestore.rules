@@ -23,6 +23,20 @@ service cloud.firestore {
         }
     }
 
+    match /_export-user-data-blacklisted-users/{userId} {
+        allow write: if get(/databases/$(database)/documents/user-roles/$(request.auth.uid)).data.isAdmin == true
+        allow read: if get(/databases/$(database)/documents/user-roles/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    match /user-roles/{userId} {
+        // Allow single read if auth uid matches with the userId
+        allow get: if request.auth != null && request.auth.uid == userId;
+        // Deny list
+        allow list: if false;
+        // Deny Write (Create, Update, Delete)
+        allow write: if false;
+    }
+
     // Access-Rules for users collection and its subcollections
     match /users/{userId} {
         // Allow single read if auth uid matches with the userId
