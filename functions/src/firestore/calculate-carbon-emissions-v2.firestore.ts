@@ -99,7 +99,10 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
         // Update consumption
         const consumptionEmissionsResult = await updateConsumption(consumption, context);
         // Check event status is edited
-        if (consumptionChangeEvent === ConsumptionChangeEvent.edited) {
+        if (
+          consumptionChangeEvent === ConsumptionChangeEvent.edited ||
+          consumptionChangeEvent === ConsumptionChangeEvent.updated
+        ) {
           // TODO: Improve this so recalculation isn't required by removing the old consumption and adding the new.
           // Recalculate all consumptions.
           await updateConsumptionSummary(context);
