@@ -399,9 +399,15 @@ async function calculateElectricityConsumptionEmissions(
     context.user.country,
     (metric) => {
       if (electricity.electricitySource && metric.electricity && electricity.electricitySource in metric.electricity) {
-        return metric.electricity[electricity.electricitySource];
+        return {
+          specificFactor: metric.electricity[electricity.electricitySource],
+          defaultFactor: metric.electricity.default,
+        };
       } else {
-        return metric.electricity.default;
+        return {
+          specificFactor: metric.electricity.default,
+          defaultFactor: metric.electricity.default,
+        };
       }
     }
   );
@@ -411,13 +417,13 @@ async function calculateElectricityConsumptionEmissions(
   if (electricity.electricitySource === "homePhotovoltaics" && context.consumption.electricity?.electricityExported) {
     return {
       carbonEmission:
-        ((context.consumption.value - context.consumption.electricity.electricityExported) / householdSize) *
-        electricityEmissionFactor,
+        (context.consumption.value / householdSize) * electricityEmissionFactor.specificFactor -
+        (context.consumption.electricity.electricityExported / householdSize) * electricityEmissionFactor.defaultFactor,
       energyExpended: (context.consumption.value - context.consumption.electricity.electricityExported) / householdSize,
     };
   }
   return {
-    carbonEmission: (context.consumption.value / householdSize) * electricityEmissionFactor,
+    carbonEmission: (context.consumption.value / householdSize) * electricityEmissionFactor.specificFactor,
     energyExpended: context.consumption.value / householdSize,
   };
 }
