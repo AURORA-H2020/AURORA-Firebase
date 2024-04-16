@@ -40,10 +40,8 @@
       "port": 9099
     }
   },
-  "storage": [
-    {
-      "bucket": "aurora-dashboard",
-      "rules": "security-rules/storage-aurora-dashboard.rules"
-    }
-  ]
+  "storage": {
+    "bucket": "aurora-dashboard",
+    "rules": "security-rules/storage-aurora-dashboard.rules"
+  }
 }
