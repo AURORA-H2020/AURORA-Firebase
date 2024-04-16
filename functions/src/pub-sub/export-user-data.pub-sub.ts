@@ -516,11 +516,11 @@ export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone
     console.log(anonymisedUserData);
 
     // Create a file in the bucket and write the full users data to it
-    const backupFolderName = FirebaseConstants.buckets.default.folders.userDataBackup.name;
+    const backupFolderName = FirebaseConstants.buckets.auroraDashboard.folders.userDataBackup.name;
     const backupFileName = `users-backup-${currentUnixTime}.json`;
     const backupFilePath = `${backupFolderName}/${backupFileName}`;
 
-    const fullUserDataFile = storage().bucket(FirebaseConstants.buckets.default.name).file(backupFilePath);
+    const fullUserDataFile = storage().bucket(FirebaseConstants.buckets.auroraDashboard.name).file(backupFilePath);
     await fullUserDataFile.save(JSON.stringify(anonymisedUserData)).then(() => {
       console.log(`Successfully exported user data to ${backupFilePath}`);
     });
