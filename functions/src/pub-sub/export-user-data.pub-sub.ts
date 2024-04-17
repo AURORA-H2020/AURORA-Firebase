@@ -513,7 +513,6 @@ export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone
 
     // Anonymise user data
     const anonymisedUserData = anonymiseUserData(consolidatedUsers);
-    console.log(anonymisedUserData);
 
     // Create a file in the bucket and write the full users data to it
     const backupFolderName = FirebaseConstants.buckets.auroraDashboard.folders.userDataBackup.name;
