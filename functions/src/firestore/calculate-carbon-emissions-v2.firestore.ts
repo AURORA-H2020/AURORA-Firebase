@@ -1030,6 +1030,11 @@ function calculateConsumptionLabel(
           overallCarbonEmissionLabel.minimum < consumptionSummaryEntry.carbonEmission.total
         ) {
           consumptionSummaryEntry.carbonEmission.label = overallCarbonEmissionLabel.label;
+        } else if (
+          overallCarbonEmissionLabel.minimum == 0 &&
+          consumptionSummaryEntry.carbonEmission.total < overallCarbonEmissionLabel.minimum
+        ) {
+          consumptionSummaryEntry.carbonEmission.label = "A+";
         }
       }
     } else {
