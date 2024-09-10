@@ -449,81 +449,84 @@ function anonymiseUserData(userData: ConsolidatedUsers): Record<string, Anonymis
  * It creates an extract of all Firestore documents within the user collection,
  * summarises the data, and uploads a JSON object to a cloud bucket.
  */
-export const exportUserData = onSchedule({ schedule: "every day 00:30", timeZone: "Europe/Berlin" }, async () => {
-  try {
-    const usersSnapshot = await firestore.collection(FirebaseConstants.collections.users.name).get();
-    const consolidatedUsers: ConsolidatedUsers = {};
+export const exportUserData = onSchedule(
+  { schedule: "every day 00:30", timeZone: "Europe/Berlin", timeoutSeconds: 360, memory: "512MiB" },
+  async () => {
+    try {
+      const usersSnapshot = await firestore.collection(FirebaseConstants.collections.users.name).get();
+      const consolidatedUsers: ConsolidatedUsers = {};
 
-    const firebaseConfig = await firestore
-      .collection(FirebaseConstants.collections.exportUserDataBlacklistedUsers.name)
-      .get();
-
-    const userIdBlacklist = firebaseConfig.docs.map((doc) => doc.id);
-
-    for (const doc of usersSnapshot.docs) {
-      const userId = doc.id;
-      consolidatedUsers;
-      consolidatedUsers[userId] = doc.data() as UserWithSubCollections;
-
-      // Fetch specific sub-collections
-      const consumptionsSnapshot = await firestore
-        .collection(FirebaseConstants.collections.users.name)
-        .doc(userId)
-        .collection(FirebaseConstants.collections.users.consumptions.name)
+      const firebaseConfig = await firestore
+        .collection(FirebaseConstants.collections.exportUserDataBlacklistedUsers.name)
         .get();
-      consolidatedUsers[userId].consumptions = consumptionsSnapshot.docs.map((doc) => doc.data() as Consumption);
 
-      const consumptionSummariesSnapshot = await firestore
-        .collection(FirebaseConstants.collections.users.name)
-        .doc(userId)
-        .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
-        .get();
-      consolidatedUsers[userId].consumptionSummaries = consumptionSummariesSnapshot.docs.map(
-        (doc) => doc.data() as ConsumptionSummary
-      );
+      const userIdBlacklist = firebaseConfig.docs.map((doc) => doc.id);
 
-      // Recurring consumptions are currently not needed for the summarised export, but included in the backup
-      const recurringConsumptionsSnapshot = await firestore
-        .collection(FirebaseConstants.collections.users.name)
-        .doc(userId)
-        .collection(FirebaseConstants.collections.users.recurringConsumptions.name)
-        .get();
-      consolidatedUsers[userId].recurringConsumptions = recurringConsumptionsSnapshot.docs.map(
-        (doc) => doc.data() as RecurringConsumption
-      );
+      for (const doc of usersSnapshot.docs) {
+        const userId = doc.id;
+        consolidatedUsers;
+        consolidatedUsers[userId] = doc.data() as UserWithSubCollections;
+
+        // Fetch specific sub-collections
+        const consumptionsSnapshot = await firestore
+          .collection(FirebaseConstants.collections.users.name)
+          .doc(userId)
+          .collection(FirebaseConstants.collections.users.consumptions.name)
+          .get();
+        consolidatedUsers[userId].consumptions = consumptionsSnapshot.docs.map((doc) => doc.data() as Consumption);
+
+        const consumptionSummariesSnapshot = await firestore
+          .collection(FirebaseConstants.collections.users.name)
+          .doc(userId)
+          .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
+          .get();
+        consolidatedUsers[userId].consumptionSummaries = consumptionSummariesSnapshot.docs.map(
+          (doc) => doc.data() as ConsumptionSummary
+        );
+
+        // Recurring consumptions are currently not needed for the summarised export, but included in the backup
+        const recurringConsumptionsSnapshot = await firestore
+          .collection(FirebaseConstants.collections.users.name)
+          .doc(userId)
+          .collection(FirebaseConstants.collections.users.recurringConsumptions.name)
+          .get();
+        consolidatedUsers[userId].recurringConsumptions = recurringConsumptionsSnapshot.docs.map(
+          (doc) => doc.data() as RecurringConsumption
+        );
+      }
+
+      const transformedUserData = transformUserData(consolidatedUsers, userIdBlacklist);
+
+      // Get time from transformedUserData to ensure same timestamp on export
+      const currentUnixTime = transformedUserData.date;
+
+      // Create a file in the bucket and write the transformed users data to it
+      const summaryFolderName = FirebaseConstants.buckets.auroraDashboard.folders.dashboardData.name;
+      const summaryFileName = `summarised-export-${currentUnixTime}.json`;
+      const summaryFilePath = `${summaryFolderName}/${summaryFileName}`;
+
+      const transformedUserDataFile = storage()
+        .bucket(FirebaseConstants.buckets.auroraDashboard.name)
+        .file(summaryFilePath);
+
+      await transformedUserDataFile.save(JSON.stringify(transformedUserData)).then(() => {
+        console.log(`Successfully exported summarised user data to ${summaryFilePath}`);
+      });
+
+      // Anonymise user data
+      const anonymisedUserData = anonymiseUserData(consolidatedUsers);
+
+      // Create a file in the bucket and write the full users data to it
+      const backupFolderName = FirebaseConstants.buckets.auroraDashboard.folders.userDataBackup.name;
+      const backupFileName = `users-backup-${currentUnixTime}.json`;
+      const backupFilePath = `${backupFolderName}/${backupFileName}`;
+
+      const fullUserDataFile = storage().bucket(FirebaseConstants.buckets.auroraDashboard.name).file(backupFilePath);
+      await fullUserDataFile.save(JSON.stringify(anonymisedUserData)).then(() => {
+        console.log(`Successfully exported user data to ${backupFilePath}`);
+      });
+    } catch (error) {
+      throw new Error(`Error exporting users data: ${error}`);
     }
-
-    const transformedUserData = transformUserData(consolidatedUsers, userIdBlacklist);
-
-    // Get time from transformedUserData to ensure same timestamp on export
-    const currentUnixTime = transformedUserData.date;
-
-    // Create a file in the bucket and write the transformed users data to it
-    const summaryFolderName = FirebaseConstants.buckets.auroraDashboard.folders.dashboardData.name;
-    const summaryFileName = `summarised-export-${currentUnixTime}.json`;
-    const summaryFilePath = `${summaryFolderName}/${summaryFileName}`;
-
-    const transformedUserDataFile = storage()
-      .bucket(FirebaseConstants.buckets.auroraDashboard.name)
-      .file(summaryFilePath);
-
-    await transformedUserDataFile.save(JSON.stringify(transformedUserData)).then(() => {
-      console.log(`Successfully exported summarised user data to ${summaryFilePath}`);
-    });
-
-    // Anonymise user data
-    const anonymisedUserData = anonymiseUserData(consolidatedUsers);
-
-    // Create a file in the bucket and write the full users data to it
-    const backupFolderName = FirebaseConstants.buckets.auroraDashboard.folders.userDataBackup.name;
-    const backupFileName = `users-backup-${currentUnixTime}.json`;
-    const backupFilePath = `${backupFolderName}/${backupFileName}`;
-
-    const fullUserDataFile = storage().bucket(FirebaseConstants.buckets.auroraDashboard.name).file(backupFilePath);
-    await fullUserDataFile.save(JSON.stringify(anonymisedUserData)).then(() => {
-      console.log(`Successfully exported user data to ${backupFilePath}`);
-    });
-  } catch (error) {
-    throw new Error(`Error exporting users data: ${error}`);
   }
-});
+);
