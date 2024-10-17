@@ -1,5 +1,5 @@
-import { UserGender } from "./user-gender";
 import { UserConsumptionMetadata } from "./user-consumption-metadata";
+import { UserGender } from "./user-gender";
 import { UserHomeEnergyLabel } from "./user-homeEnergyLabel";
 import { UserHouseholdProfile } from "./user-householdProfile";
 import { UserSettings } from "./user-settings/user-settings";
