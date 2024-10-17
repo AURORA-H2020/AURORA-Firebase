@@ -14,6 +14,7 @@ export interface CountryMetricElectricity {
   default: number;
   defaultGreenProvider: number;
   homePhotovoltaics: number;
+  pvInvestment: number;
 }
 
 export interface CountryMetricHeatingEntry {
