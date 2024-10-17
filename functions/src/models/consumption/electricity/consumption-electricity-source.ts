@@ -1,4 +1,4 @@
 /**
  * A consumption electricity source
  */
-export type ConsumptionElectricitySource = "default" | "homePhotovoltaics" | "defaultGreenProvider";
+export type ConsumptionElectricitySource = "default" | "homePhotovoltaics" | "defaultGreenProvider" | "pvInvestment";
