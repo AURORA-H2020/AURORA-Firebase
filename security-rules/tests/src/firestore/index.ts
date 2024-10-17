@@ -271,6 +271,352 @@ describe("Firestore Security Rules", () => {
     });
   });
 
+  describe("/user-roles", () => {
+    describe("Unauthorized User", () => {
+      it("Deny to read a single user role", () =>
+        assertFails(
+          testContext.unauthenticatedContext().firestore().collection("user-roles").doc(generateRandomString()).get()
+        ));
+      it("Deny to list all user roles", () =>
+        assertFails(testContext.unauthenticatedContext().firestore().collection("user-roles").get()));
+      it("Deny to create a user role", () =>
+        assertFails(testContext.unauthenticatedContext().firestore().collection("user-roles").add({})));
+      it("Deny to update a user role", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("user-roles")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a user role", () =>
+        assertFails(
+          testContext.unauthenticatedContext().firestore().collection("user-roles").doc(generateRandomString()).delete()
+        ));
+    });
+    describe("Authorized User", () => {
+      it("Allow to read a single user role if auth uid matches", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("user-roles")
+            .doc(testContext.authenticatedContextUserId)
+            .get()
+        ));
+      it("Deny to read a single user role if auth uid not matches", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("user-roles").doc(generateRandomString()).get()
+        ));
+      it("Deny to list all user roles", () =>
+        assertFails(testContext.authenticatedContext().firestore().collection("user-roles").get()));
+      it("Deny to create a user role", () =>
+        assertFails(testContext.authenticatedContext().firestore().collection("user-roles").add({})));
+      it("Deny to update a user role", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("user-roles").doc(generateRandomString()).update({})
+        ));
+      it("Deny to delete a user role", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("user-roles").doc(generateRandomString()).delete()
+        ));
+    });
+  });
+
+  describe("/_export-user-data-blacklisted-users", () => {
+    describe("Unauthenticated User", () => {
+      it("Deny to read a single document", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Deny to list all documents", () =>
+        assertFails(
+          testContext.unauthenticatedContext().firestore().collection("_export-user-data-blacklisted-users").get()
+        ));
+      it("Deny to create a document", () =>
+        assertFails(
+          testContext.unauthenticatedContext().firestore().collection("_export-user-data-blacklisted-users").add({})
+        ));
+      it("Deny to update a document", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a document", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .delete()
+        ));
+    });
+
+    describe("Authenticated User", () => {
+      it("Deny to read a single document", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Deny to list all documents", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("_export-user-data-blacklisted-users").get()
+        ));
+      it("Deny to create a document", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("_export-user-data-blacklisted-users").add({})
+        ));
+      it("Deny to update a document", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a document", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .delete()
+        ));
+    });
+
+    describe("Admin User", () => {
+      beforeEach(async () => {
+        await testContext.testEnvironment.withSecurityRulesDisabled((context) =>
+          context
+            .firestore()
+            .collection("user-roles")
+            .doc(testContext.authenticatedContextUserId)
+            .set({ isAdmin: true })
+        );
+      });
+
+      it("Allow to read a single document", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Allow to list all documents", () =>
+        assertSucceeds(
+          testContext.authenticatedContext().firestore().collection("_export-user-data-blacklisted-users").get()
+        ));
+      it("Allow to create a document", () =>
+        assertSucceeds(
+          testContext.authenticatedContext().firestore().collection("_export-user-data-blacklisted-users").add({})
+        ));
+      it("Allow to update a document", async () => {
+        const docId = generateRandomString();
+        await testContext.testEnvironment.withSecurityRulesDisabled((context) =>
+          context.firestore().collection("_export-user-data-blacklisted-users").doc(docId).set({})
+        );
+        await assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(docId)
+            .update({})
+        );
+      });
+      it("Allow to delete a document", async () => {
+        const docId = generateRandomString();
+        await testContext.testEnvironment.withSecurityRulesDisabled((context) =>
+          context.firestore().collection("_export-user-data-blacklisted-users").doc(docId).set({})
+        );
+        await assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("_export-user-data-blacklisted-users")
+            .doc(docId)
+            .delete()
+        );
+      });
+    });
+  });
+
+  describe("/pv-plants", () => {
+    describe("Unauthorized User", () => {
+      it("Allow to read a single pv plant", () =>
+        assertSucceeds(
+          testContext.unauthenticatedContext().firestore().collection("pv-plants").doc(generateRandomString()).get()
+        ));
+      it("Allow to list all pv-plants", () =>
+        assertSucceeds(testContext.unauthenticatedContext().firestore().collection("pv-plants").get()));
+      it("Deny to create a pv-plant", () =>
+        assertFails(testContext.unauthenticatedContext().firestore().collection("pv-plants").add({})));
+      it("Deny to update a pv-plant", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a pv-plant", () =>
+        assertFails(
+          testContext.unauthenticatedContext().firestore().collection("pv-plants").doc(generateRandomString()).delete()
+        ));
+    });
+    describe("Authorized User", () => {
+      it("Allow to read a single pv plant", () =>
+        assertSucceeds(
+          testContext.authenticatedContext().firestore().collection("pv-plants").doc(generateRandomString()).get()
+        ));
+      it("Allow to list all pv plants", () =>
+        assertSucceeds(testContext.authenticatedContext().firestore().collection("pv-plants").get()));
+      it("Deny to create a pv plant", () =>
+        assertFails(testContext.authenticatedContext().firestore().collection("pv-plants").add({})));
+      it("Deny to update a pv plant", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("pv-plants").doc(generateRandomString()).update({})
+        ));
+      it("Deny to delete a pv plant", () =>
+        assertFails(
+          testContext.authenticatedContext().firestore().collection("pv-plants").doc(generateRandomString()).delete()
+        ));
+    });
+  });
+
+  describe("/pv-plants/data", () => {
+    describe("Unauthorized User", () => {
+      it("Deny to read a single pv plant data", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Deny to list all pv plant data", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .get()
+        ));
+      it("Deny to create a pv plant data", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .add({})
+        ));
+      it("Deny to update a pv plant data", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a pv plant data", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .doc(generateRandomString())
+            .delete()
+        ));
+    });
+    describe("Authorized User", () => {
+      it("Allow to read a single pv plant data", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Allow to list all pv plant data", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .get()
+        ));
+      it("Deny to create a pv plant data", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .add({})
+        ));
+      it("Deny to update a pv plant data", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a pv plant data", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("pv-plants")
+            .doc(generateRandomString())
+            .collection("data")
+            .doc(generateRandomString())
+            .delete()
+        ));
+    });
+  });
+
   describe("/users", () => {
     describe("Unauthorized User", () => {
       it("Deny to read a single user", () =>
@@ -825,6 +1171,183 @@ describe("Firestore Security Rules", () => {
             .collection("users")
             .doc(generateRandomString())
             .collection("recurring-consumptions")
+            .doc(generateRandomString())
+            .delete()
+        ));
+    });
+  });
+
+  describe("/users/pv-investments", () => {
+    describe("Unauthorized User", () => {
+      it("Deny to read a single pv investment", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Deny to list all pv investments", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .get()
+        ));
+      it("Deny to create a pv investment", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .add({})
+        ));
+      it("Deny to update a pv investment", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Deny to delete a pv investment", () =>
+        assertFails(
+          testContext
+            .unauthenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .delete()
+        ));
+    });
+    describe("Authorized User", () => {
+      it("Allow to read a single pv investment if auth uid matches", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Deny to read a single pv investment if auth uid not matches", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(generateRandomString())
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .get()
+        ));
+      it("Allow to list all pv investments if auth uid matches", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .get()
+        ));
+      it("Deny to list all pv investments if auth uid not matches", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(generateRandomString())
+            .collection("pv-investments")
+            .get()
+        ));
+      it("Allow to create a pv investment if auth uid matches", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .add({})
+        ));
+      it("Deny to create a pv investment if auth uid not matches", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(generateRandomString())
+            .collection("pv-investments")
+            .add({})
+        ));
+      it("Allow to update a pv investment", async () => {
+        const recurringConsumptionId = generateRandomString();
+        await testContext.testEnvironment.withSecurityRulesDisabled((context) =>
+          context
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(recurringConsumptionId)
+            .set({})
+        );
+        await assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(recurringConsumptionId)
+            .update({})
+        );
+      });
+      it("Deny to update a pv investment if auth uid not matches", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(generateRandomString())
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .update({})
+        ));
+      it("Allow to delete a pv investment if auth uid matches", () =>
+        assertSucceeds(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(testContext.authenticatedContextUserId)
+            .collection("pv-investments")
+            .doc(generateRandomString())
+            .delete()
+        ));
+      it("Deny to delete a pv investment if auth uid not matches", () =>
+        assertFails(
+          testContext
+            .authenticatedContext()
+            .firestore()
+            .collection("users")
+            .doc(generateRandomString())
+            .collection("pv-investments")
             .doc(generateRandomString())
             .delete()
         ));

@@ -37,6 +37,19 @@ service cloud.firestore {
         allow write: if false;
     }
 
+    match /pv-plants/{pvPlantId} {
+        // Allow read for all users
+        allow read: if true;
+        // Deny Write (Create, Update, Delete)
+        allow write: if false;
+        match /data/{pvDataId} {
+          // Allow read if authenticated
+          allow read: if request.auth != null;
+          // Deny Write (Create, Update, Delete)
+          allow write: if false;
+        }
+    }
+
     // Access-Rules for users collection and its subcollections
     match /users/{userId} {
         // Allow single read if auth uid matches with the userId
@@ -65,6 +78,12 @@ service cloud.firestore {
         }
 
         match /recurring-consumptions/{recurringConsumptionID} {
+          // Allow read and write if auth uid matches with the userId
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+
+        // Access-Rules for pv-investments subcollection
+        match /pv-investments/{pvInvestmentID} {
           // Allow read and write if auth uid matches with the userId
           allow read, write: if request.auth != null && request.auth.uid == userId;
         }
