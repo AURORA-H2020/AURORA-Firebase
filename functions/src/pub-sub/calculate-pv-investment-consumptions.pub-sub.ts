@@ -27,50 +27,74 @@ export const calculatePvInvestmentConsumptions = onSchedule(
       .where("active", "==", true)
       .get();
 
+    console.log(`Found ${pvPlants.docs.length} active PV plants`);
+
     await Promise.allSettled(
-      pvPlants.docs.map(async (pvPlantDocument) => {
-        const pvPlant = pvPlantDocument.data() as PvPlant;
+      pvPlants.docs
+        .map(async (pvPlantDocument) => {
+          const pvPlant = pvPlantDocument.data() as PvPlant;
 
-        const pvData = await firestore
-          .collection(FirebaseConstants.collections.pvPlants.name)
-          .doc(pvPlantDocument.id)
-          .collection(FirebaseConstants.collections.pvPlants.data.name)
-          .get();
+          console.log(`Calculating consumptions for PV plant ${pvPlantDocument.id}`);
 
-        const pvInvestments = await firestore
-          .collectionGroup(FirebaseConstants.collections.users.pvInvestments.name)
-          .where("pvPlant", "==", pvPlantDocument.id)
-          .get();
+          const pvData = await firestore
+            .collection(FirebaseConstants.collections.pvPlants.name)
+            .doc(pvPlantDocument.id)
+            .collection(FirebaseConstants.collections.pvPlants.data.name)
+            .get();
 
-        pvInvestments.docs.map(async (pvInvestmentDocument) => {
-          const pvInvestment = pvInvestmentDocument.data() as UserPvInvestment;
+          console.log(`Found ${pvData.docs.length} PV data entries for PV plant ${pvPlantDocument.id}`);
 
-          const applicablePvData = pvData.docs.filter((d) => {
-            const pvData = d.data() as PvPlantData;
-            return pvData.date >= pvInvestment.investmentDate;
-          });
+          const pvInvestments = await firestore
+            .collectionGroup(FirebaseConstants.collections.users.pvInvestments.name)
+            .where("pvPlant", "==", pvPlantDocument.id)
+            .get();
 
-          const consumption = makeConsumption(pvPlant, pvInvestment, sumPvData(applicablePvData));
-          if (!consumption) {
-            // Return null as no consumption can be created
-            return null;
-          }
+          console.log(`Found ${pvInvestments.docs.length} PV investments for PV plant ${pvPlantDocument.id}`);
 
-          consumption.generatedByPvInvestmentId = pvInvestmentDocument.id;
+          await Promise.allSettled(
+            pvInvestments.docs
+              .map(async (pvInvestmentDocument) => {
+                const pvInvestment = pvInvestmentDocument.data() as UserPvInvestment;
 
-          // Retrieve the pv-investments collection reference
-          const pvInvestmentsCollection = pvInvestmentDocument.ref.parent;
-          // Retrieve the user document reference from the pv-investments collection
-          const userDocument = pvInvestmentsCollection.parent;
-          if (!userDocument) return null;
-          // Add the consumption to the consumptions collection
-          const documentRef = userDocument
-            .collection(FirebaseConstants.collections.users.consumptions.name)
-            .doc(pvInvestmentDocument.id);
-          return documentRef.set(consumption);
-        });
-      })
-    ).then(() => console.log("Successfully calculated pv offset"));
+                console.log(
+                  `Calculating consumption for PV investment ${pvInvestmentDocument.id} of user ${pvInvestmentDocument.ref.parent.id} for PV plant ${pvPlantDocument.id}`
+                );
+
+                const applicablePvData = pvData.docs.filter((d) => {
+                  const pvData = d.data() as PvPlantData;
+                  return pvData.date >= pvInvestment.investmentDate;
+                });
+
+                const consumption = makeConsumption(pvPlant, pvInvestment, sumPvData(applicablePvData));
+                if (!consumption) {
+                  // Return null as no consumption can be created
+                  return null;
+                }
+
+                console.log(
+                  `Created consumption \n ${JSON.stringify(consumption)} \n for PV investment ${
+                    pvInvestmentDocument.id
+                  }`
+                );
+
+                consumption.generatedByPvInvestmentId = pvInvestmentDocument.id;
+
+                // Retrieve the pv-investments collection reference
+                const pvInvestmentsCollection = pvInvestmentDocument.ref.parent;
+                // Retrieve the user document reference from the pv-investments collection
+                const userDocument = pvInvestmentsCollection.parent;
+                if (!userDocument) return null;
+                // Add the consumption to the consumptions collection
+                const documentRef = userDocument
+                  .collection(FirebaseConstants.collections.users.consumptions.name)
+                  .doc(pvInvestmentDocument.id);
+                return documentRef.set(consumption);
+              })
+              .filter(Boolean)
+          );
+        })
+        .filter(Boolean)
+    );
   }
 );
 
