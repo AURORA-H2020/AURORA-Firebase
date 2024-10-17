@@ -24,9 +24,18 @@ export const FirebaseConstants = {
       recurringConsumptions: {
         name: "recurring-consumptions",
       },
+      pvInvestments: {
+        name: "pv-investments",
+      },
     },
     userRoles: {
       name: "user-roles",
+    },
+    pvPlants: {
+      name: "pv-plants",
+      data: {
+        name: "data",
+      },
     },
     exportUserDataBlacklistedUsers: {
       name: "_export-user-data-blacklisted-users",
