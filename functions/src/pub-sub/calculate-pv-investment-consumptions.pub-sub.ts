@@ -27,18 +27,12 @@ export const calculatePvInvestmentConsumptions = onSchedule(
       .where("active", "==", true)
       .get();
 
-    console.log(`Found ${pvPlants.docs.length} active PV plants`);
-
     const pvInvestments = await firestore.collectionGroup(FirebaseConstants.collections.users.pvInvestments.name).get();
-
-    console.log(`Found ${pvInvestments.docs.length} PV investments`);
 
     await Promise.allSettled(
       pvPlants.docs
         .map(async (pvPlantDocument) => {
           const pvPlant = pvPlantDocument.data() as PvPlant;
-
-          console.log(`Calculating consumptions for PV plant ${pvPlantDocument.id}`);
 
           const pvData = await firestore
             .collection(FirebaseConstants.collections.pvPlants.name)
@@ -46,19 +40,16 @@ export const calculatePvInvestmentConsumptions = onSchedule(
             .collection(FirebaseConstants.collections.pvPlants.data.name)
             .get();
 
-          console.log(`Found ${pvData.docs.length} PV data entries for PV plant ${pvPlantDocument.id}`);
-
           await Promise.allSettled(
             pvInvestments.docs
               .map(async (pvInvestmentDocument) => {
                 const pvInvestment = pvInvestmentDocument.data() as UserPvInvestment;
 
-                // Check if the investment is for the correct PV plant
+                /**
+                 * Check if the investment is for the correct PV plant
+                 * Seems inefficient, but getting the pvInvestment collectionGroup here doesn't seem to work.
+                 */
                 if (pvInvestment.pvPlant !== pvPlantDocument.id) return null;
-
-                console.log(
-                  `Calculating consumption for PV investment ${pvInvestmentDocument.id} of user ${pvInvestmentDocument.ref.parent.id} for PV plant ${pvPlantDocument.id}`
-                );
 
                 const applicablePvData = pvData.docs.filter((d) => {
                   const pvData = d.data() as PvPlantData;
@@ -70,12 +61,6 @@ export const calculatePvInvestmentConsumptions = onSchedule(
                   // Return null as no consumption can be created
                   return null;
                 }
-
-                console.log(
-                  `Created consumption \n ${JSON.stringify(consumption)} \n for PV investment ${
-                    pvInvestmentDocument.id
-                  }`
-                );
 
                 consumption.generatedByPvInvestmentId = pvInvestmentDocument.id;
 
@@ -107,7 +92,6 @@ export const calculatePvInvestmentConsumptions = onSchedule(
 const sumPvData = (pvDataDocuments: QueryDocumentSnapshot<DocumentData>[]) => {
   return pvDataDocuments
     .map((p) => {
-      console.log(JSON.stringify(p.data()));
       return p.data() as PvPlantData;
     })
     .reduce((prev, d) => prev + d.Ep, 0);
