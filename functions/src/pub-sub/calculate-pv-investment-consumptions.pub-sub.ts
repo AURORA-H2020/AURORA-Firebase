@@ -29,6 +29,10 @@ export const calculatePvInvestmentConsumptions = onSchedule(
 
     console.log(`Found ${pvPlants.docs.length} active PV plants`);
 
+    const pvInvestments = await firestore.collectionGroup(FirebaseConstants.collections.users.pvInvestments.name).get();
+
+    console.log(`Found ${pvInvestments.docs.length} PV investments`);
+
     await Promise.allSettled(
       pvPlants.docs
         .map(async (pvPlantDocument) => {
@@ -44,17 +48,13 @@ export const calculatePvInvestmentConsumptions = onSchedule(
 
           console.log(`Found ${pvData.docs.length} PV data entries for PV plant ${pvPlantDocument.id}`);
 
-          const pvInvestments = await firestore
-            .collectionGroup(FirebaseConstants.collections.users.pvInvestments.name)
-            .where("pvPlant", "==", pvPlantDocument.id)
-            .get();
-
-          console.log(`Found ${pvInvestments.docs.length} PV investments for PV plant ${pvPlantDocument.id}`);
-
           await Promise.allSettled(
             pvInvestments.docs
               .map(async (pvInvestmentDocument) => {
                 const pvInvestment = pvInvestmentDocument.data() as UserPvInvestment;
+
+                // Check if the investment is for the correct PV plant
+                if (pvInvestment.pvPlant !== pvPlantDocument.id) return null;
 
                 console.log(
                   `Calculating consumption for PV investment ${pvInvestmentDocument.id} of user ${pvInvestmentDocument.ref.parent.id} for PV plant ${pvPlantDocument.id}`
