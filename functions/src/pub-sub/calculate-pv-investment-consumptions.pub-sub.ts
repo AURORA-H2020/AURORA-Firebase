@@ -25,7 +25,6 @@ export const calculatePvInvestmentConsumptions = onSchedule(
     const pvPlants = await firestore
       .collectionGroup(FirebaseConstants.collections.pvPlants.name)
       .where("active", "==", true)
-      .where("capacity", "!=", null)
       .get();
 
     await Promise.allSettled(
