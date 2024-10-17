@@ -56,4 +56,8 @@ export interface Consumption {
    * The recurring consumption identifier which auto generated this consumption
    */
   generatedByRecurringConsumptionId?: string;
+  /**
+   * The pv investment identifier which auto generated this consumption
+   */
+  generatedByPvInvestmentId?: string;
 }
