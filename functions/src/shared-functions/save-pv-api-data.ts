@@ -1,15 +1,10 @@
 import axios, { AxiosResponse } from "axios";
-import { defineSecret } from "firebase-functions/params";
 import { PvPlant } from "../models/pv-plants/pv-plant";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
-
-// Get API token from Secret Manager
-const pvApiToken = defineSecret("PV_API_TOKEN");
-const pvApiBaseUrl = defineSecret("PV_API_BASE_URL");
 
 interface QpvApiResponse {
   data: {
@@ -22,17 +17,15 @@ export const savePvApiData = async ({
   plantDoc,
   startDate,
   endDate,
+  secrets,
 }: {
   plantDoc: FirebaseFirestore.QueryDocumentSnapshot<PvPlant>;
   startDate: Date;
   endDate: Date;
+  secrets: { pvApiToken: string; pvApiBaseUrl: string };
 }) => {
-  if (pvApiToken.value() === undefined || pvApiBaseUrl.value() === undefined) {
-    return { success: false, error: "Missing PV API credentials" };
-  }
-
-  const apiToken = pvApiToken.value();
-  const apiUrl = `${pvApiBaseUrl.value()}/v1/plants/${plantDoc.data().plantId}/get-kpi-1d`;
+  const apiToken = secrets.pvApiToken;
+  const apiUrl = `${secrets.pvApiBaseUrl}/v1/plants/${plantDoc.data().plantId}/get-kpi-1d`;
 
   try {
     const response = (await axios({

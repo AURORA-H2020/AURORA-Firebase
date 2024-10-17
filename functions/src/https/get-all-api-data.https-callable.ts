@@ -1,4 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
+import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { PvPlant } from "../models/pv-plants/pv-plant";
 import { isAdmin } from "../shared-functions/is-Admin";
@@ -12,13 +13,17 @@ initializeAppIfNeeded();
 // Initialize Firestore
 const firestore = getFirestore();
 
+// Get API token and URL from Secret Manager
+const pvApiToken = defineSecret("PV_API_TOKEN");
+const pvApiBaseUrl = defineSecret("PV_API_BASE_URL");
+
 /**
  * [getAllApiData]
  * A HTTPS Callable Cloud Function.
  * This functions fetches all PV data from an API and stores it in Firestore.
  * Triggered manually for fixing missing data or initalising new PV plants.
  */
-export const getAllApiData = onCall(async (req) => {
+export const getAllApiData = onCall({ secrets: [pvApiToken, pvApiBaseUrl] }, async (req) => {
   const { plantDocumentId } = req.data;
 
   const auth = req.auth;
@@ -65,6 +70,7 @@ export const getAllApiData = onCall(async (req) => {
     plantDoc: plantDoc,
     startDate: plantDoc.data().installationDate?.toDate() ?? getYesterday(), // Making typescript happy..
     endDate: getYesterday(),
+    secrets: { pvApiToken: pvApiToken.value(), pvApiBaseUrl: pvApiBaseUrl.value() },
   });
 
   return { ...result };
