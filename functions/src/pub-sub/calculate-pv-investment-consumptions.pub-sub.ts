@@ -109,11 +109,11 @@ const sumPvData = (pvDataDocuments: QueryDocumentSnapshot<DocumentData>[]) => {
  * @returns A consumption record of type `Consumption` if valid, otherwise null.
  */
 function makeConsumption(pvPlant: PvPlant, pvInvestment: UserPvInvestment, Ep: number): Consumption | null {
-  if (!pvPlant.capacity || !Ep) {
+  if (!pvPlant.capacity || !Ep || !pvInvestment.investmentCapacity) {
     return null;
   }
 
-  const sharePercentage = pvInvestment.share / pvPlant.capacity;
+  const sharePercentage = pvInvestment.investmentCapacity / pvPlant.capacity;
 
   return {
     createdAt: Timestamp.now(),
@@ -125,6 +125,6 @@ function makeConsumption(pvPlant: PvPlant, pvInvestment: UserPvInvestment, Ep: n
       electricitySource: "pvInvestment",
     },
     value: Ep * sharePercentage,
-    description: `${pvPlant.name} | ${pvPlant.capacity} kW | ${pvInvestment.share}%`,
+    description: `${pvPlant.name} | ${pvPlant.capacity} kW | ${pvInvestment.investmentCapacity}%`,
   };
 }

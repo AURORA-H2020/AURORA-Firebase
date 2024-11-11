@@ -2,9 +2,13 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export interface UserPvInvestment {
   /**
-   * The user's investment in the installation
+   * The user's monetary investment in the installation
    */
-  investment: number;
+  investmentPrice?: number;
+  /**
+   * The user's investment capacity in the installation in kW
+   */
+  investmentCapacity?: number;
   /**
    * The user's share in the installation
    */

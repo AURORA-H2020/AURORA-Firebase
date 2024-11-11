@@ -34,6 +34,14 @@ export interface PvPlant {
    */
   capacity?: number;
   /**
+   * The price per share
+   */
+  pricePerShare: number;
+  /**
+   * The kW per share
+   */
+  kwPerShare: number;
+  /**
    * The status of the PV installation
    */
   active: boolean;
