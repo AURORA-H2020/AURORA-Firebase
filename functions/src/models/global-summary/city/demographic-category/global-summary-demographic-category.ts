@@ -1,4 +1,10 @@
 export interface GlobalSummaryDemographicCategory {
-  demographicCategory: string;
-  count: number; // Total users in category.
+	/**
+	 * The demographic category of the users.
+	 */
+	demographicCategory: string;
+	/**
+	 * Total users in category.
+	 */
+	count: number;
 }

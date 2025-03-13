@@ -1,16 +1,16 @@
-import { Timestamp } from "firebase-admin/firestore";
+import type { Timestamp } from "firebase-admin/firestore";
 
 /**
  * A PV data entry captured from an API
  */
 
 export interface PvPlantData {
-  /**
-   * The date
-   */
-  date: Timestamp;
-  /**
-   * The energy production
-   */
-  Ep: number;
+	/**
+	 * The date
+	 */
+	date: Timestamp;
+	/**
+	 * The energy production in Wh
+	 */
+	Ep: number;
 }

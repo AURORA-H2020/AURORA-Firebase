@@ -1,8 +1,8 @@
-import { CategoryLabel } from "../../../label/consumption-type-labels";
-import { GlobalSummaryCategoryTemporalMonth } from "./global-sumaary-category-temporal-month";
+import type { CategoryLabel } from "../../../label/consumption-type-labels";
+import type { GlobalSummaryCategoryTemporalMonth } from "./global-sumaary-category-temporal-month";
 
 export interface GlobalSummaryCategoryTemporalYear {
-  year: string;
-  categoryLabels: CategoryLabel[];
-  data: GlobalSummaryCategoryTemporalMonth[];
+	year: string;
+	categoryLabels: CategoryLabel[];
+	data: GlobalSummaryCategoryTemporalMonth[];
 }

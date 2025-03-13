@@ -1,8 +1,8 @@
-import { UserSettingsUnitSystem } from "./user-settings-unitSystem";
+import type { UserSettingsUnitSystem } from "./user-settings-unitSystem";
 
 export interface UserSettings {
-    /**
-     * The user's unit system setting
-     */
-    unitSystem: UserSettingsUnitSystem;
+	/**
+	 * The user's unit system setting
+	 */
+	unitSystem: UserSettingsUnitSystem;
 }
