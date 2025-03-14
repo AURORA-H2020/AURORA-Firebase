@@ -20,6 +20,7 @@ export * from "./firestore/calculate-investment.firestore";
  */
 export * from "./https/download-user-data.https-callable";
 export * from "./https/get-all-api-data.https-callable";
+export * from "./https/update-recommendations.https-callable";
 
 /**
  * Pub/Sub Cloud Functions

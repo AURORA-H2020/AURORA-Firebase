@@ -87,6 +87,12 @@ service cloud.firestore {
           // Allow read and write if auth uid matches with the userId
           allow read, write: if request.auth != null && request.auth.uid == userId;
         }
+
+        // Access-Rules for recommendations subcollection
+        match /recommendations/{recommendationID} {
+          // Allow read and write if auth uid matches with the userId
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
     }
 
   }
