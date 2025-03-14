@@ -8,16 +8,15 @@ initializeAppIfNeeded();
 // Initialize Firestore
 const firestore = getFirestore();
 
-export const isAdmin = (userId: string): Promise<boolean> => {
-  return firestore
-    .collection(FirebaseConstants.collections.userRoles.name)
-    .doc(userId)
-    .get()
-    .then((doc) => {
-      if (doc.exists) {
-        return doc.data()?.isAdmin;
-      } else {
-        return false;
-      }
-    });
+export const isAdmin = async (userId: string): Promise<boolean> => {
+	return firestore
+		.collection(FirebaseConstants.collections.userRoles.name)
+		.doc(userId)
+		.get()
+		.then((doc) => {
+			if (doc.exists) {
+				return doc.data()?.isAdmin;
+			}
+			return false;
+		});
 };
