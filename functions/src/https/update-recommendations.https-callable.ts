@@ -7,6 +7,7 @@ import { createRecommenderUser } from "../shared-functions/create-recommender-us
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 import { runRecommenderEngine } from "../shared-functions/run-recommender-engine";
+import { createRecommenderConsumptions } from "../shared-functions/create-recommender-consumptions";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -64,6 +65,21 @@ export const updateRecommendations = onCall(
 			return {
 				success: false,
 				error: createUserRes.error,
+			};
+		}
+
+		const createConsumptionsRes = await createRecommenderConsumptions({
+			userDoc,
+			secrets: {
+				recommenderApiToken: recommenderApiToken.value(),
+				recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
+			},
+		});
+
+		if (!createConsumptionsRes.success) {
+			return {
+				success: false,
+				error: createConsumptionsRes.error,
 			};
 		}
 
