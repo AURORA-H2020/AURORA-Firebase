@@ -725,8 +725,8 @@ async function updateConsumptionSummary(
 		latestConsumptionSummaryVersion ===
 			context.user.consumptionSummaryMeta?.version &&
     consumptionSummaries.length > 0 &&
-    consumption &&
-    !isXDaysAgo(context.user.consumptionSummaryMeta?.lastRecalculation, 14)
+		consumption /* &&
+		!isXDaysAgo(context.user.consumptionSummaryMeta?.lastRecalculation, 14) */
   ) {
     consumptionSummaries = updateConsumptionSummaryEntries(
       consumption as Consumption,
@@ -801,20 +801,25 @@ async function updateConsumptionSummary(
 }
 
 /**
+ * @deprecated
  * Retrieve a bool value if a given date is greater than a given threshold in days
  * @param date The date
  * @param thresholdDays The threshold in days
  */
-function isXDaysAgo(date: Timestamp | undefined, thresholdDays: number): boolean {
+/* function isXDaysAgo(
+	date: Timestamp | undefined,
+	thresholdDays: number,
+): boolean {
 	if (date) {
 		const currentTime = new Date();
 		const dateToCheck = new Date(date.seconds * 1000);
-    const diffDays = Math.abs(currentTime.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24);
+		const diffDays =
+			Math.abs(currentTime.getTime() - dateToCheck.getTime()) /
+			(1000 * 60 * 60 * 24);
 		return diffDays > thresholdDays;
-  } else {
-    return true;
 	}
-}
+	return true;
+} */
 
 /**
  * Update consumption summary entries
