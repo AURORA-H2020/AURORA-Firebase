@@ -53,7 +53,7 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
     // Determine the consumption change event
     const consumptionChangeEvent = determineConsumptionChangeEvent(
       event.data?.before as DocumentSnapshot<Consumption> | undefined,
-      event.data?.after as DocumentSnapshot<Consumption> | undefined
+			event.data?.after as DocumentSnapshot<Consumption> | undefined,
     );
     // Check if event status is reinvocation
     if (consumptionChangeEvent === ConsumptionChangeEvent.reinvocation) {
@@ -61,10 +61,17 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
       // saying that the function was called as this function updates the consumption
       return;
     }
-    console.log("Calculating carbon emissions", event.document, consumptionChangeEvent);
+		console.log(
+			"Calculating carbon emissions",
+			event.document,
+			consumptionChangeEvent,
+		);
     // Retrieve the user from the users collection by using the "userId" parameter from the path
     const user = (
-      await firestore.collection(FirebaseConstants.collections.users.name).doc(event.params.userId).get()
+			await firestore
+				.collection(FirebaseConstants.collections.users.name)
+				.doc(event.params.userId)
+				.get()
     ).data() as User;
     // Check if user is unavailable
     if (!user) {
@@ -77,17 +84,15 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
       user: user,
     };
     // Check if consumptionVersion matches with latest, else recalculate all consumptions
-    if (!user.consumptionMeta || user.consumptionMeta?.version != latestConsumptionVersion) {
+		if (
+			!user.consumptionMeta ||
+			user.consumptionMeta?.version !== latestConsumptionVersion
+		) {
       console.log(
-        "Consumption version mismatch. Was: " +
-          user.consumptionMeta?.version +
-          " | Expected: " +
-          latestConsumptionVersion +
-          "  Recalculating consumptions for user: " +
-          event.params.userId
+				`Consumption version mismatch. Was: ${user.consumptionMeta?.version} | Expected: ${latestConsumptionVersion}  Recalculating consumptions for user: ${event.params.userId}`,
       );
       // Update all consumptions
-      await updateAllConsumptions(context);
+			await updateAllConsumptions(context, secrets);
       // Update Consumption Summary
       // Passing no consumption will force recalculation based on all existing consumptions
       await updateConsumptionSummary(context);
@@ -97,7 +102,10 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
       // Check if consumption exists
       if (consumption && event.data?.after.exists) {
         // Update consumption
-        const consumptionEmissionsResult = await updateConsumption(consumption, context);
+				const consumptionEmissionsResult = await updateConsumption(
+					consumption,
+					context,
+				);
         // Check event status is edited
         if (
           consumptionChangeEvent === ConsumptionChangeEvent.edited ||
@@ -108,8 +116,10 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
           await updateConsumptionSummary(context);
         } else {
           // Update consumption
-          consumption.carbonEmissions = consumptionEmissionsResult.carbonEmission;
-          consumption.energyExpended = consumptionEmissionsResult.energyExpended;
+					consumption.carbonEmissions =
+						consumptionEmissionsResult.carbonEmission;
+					consumption.energyExpended =
+						consumptionEmissionsResult.energyExpended;
           consumption.version = latestConsumptionVersion;
           consumption.updatedAt = Timestamp.now();
           // Update consumption summary
@@ -117,10 +127,14 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
         }
       } else {
         // Otherwise the consumption has been deleted, so we update the summary to remove it.
-        await updateConsumptionSummary(context, event.data?.before.data() as Consumption, true);
-      }
+				await updateConsumptionSummary(
+					context,
+					event.data?.before.data() as Consumption,
+					true,
+				);
     }
   }
+	},
 );
 
 /**
@@ -161,19 +175,29 @@ enum ConsumptionChangeEvent {
  */
 function determineConsumptionChangeEvent(
   before?: DocumentSnapshot<Consumption>,
-  after?: DocumentSnapshot<Consumption>
+	after?: DocumentSnapshot<Consumption>,
 ): ConsumptionChangeEvent {
-  if (before && before.exists && after && after.exists) {
+	if (before?.exists && after && after.exists) {
     let event: ConsumptionChangeEvent = ConsumptionChangeEvent.updated;
     const category: ConsumptionCategory | undefined = after.data()?.category;
-    if (category == "transportation") {
-      if (JSON.stringify(after.data()?.transportation) != JSON.stringify(before.data()?.transportation)) {
+		if (category === "transportation") {
+			if (
+				JSON.stringify(after.data()?.transportation) !==
+				JSON.stringify(before.data()?.transportation)
+			) {
         event = ConsumptionChangeEvent.edited;
       }
-    } else if (category && JSON.stringify(after.data()?.[category]) != JSON.stringify(before.data()?.[category])) {
+		} else if (
+			category &&
+			JSON.stringify(after.data()?.[category]) !==
+				JSON.stringify(before.data()?.[category])
+		) {
       event = ConsumptionChangeEvent.edited;
     }
-    if (after.data()?.value == before.data()?.value && event !== ConsumptionChangeEvent.edited) {
+		if (
+			after.data()?.value === before.data()?.value &&
+			event !== ConsumptionChangeEvent.edited
+		) {
       if (
         (after.data()?.energyExpended || after.data()?.energyExpended === 0) &&
         (after.data()?.carbonEmissions || after.data()?.carbonEmissions === 0)
@@ -184,18 +208,21 @@ function determineConsumptionChangeEvent(
       event = ConsumptionChangeEvent.edited;
     }
     return event;
-  } else if (after && after.exists && before?.exists === false) {
+	}
+	if (after?.exists && before?.exists === false) {
     return ConsumptionChangeEvent.created;
-  } else {
-    return ConsumptionChangeEvent.deleted;
   }
+
+	return ConsumptionChangeEvent.deleted;
 }
 
 /**
  * Update all consumption
  * @param context The event context
  */
-async function updateAllConsumptions(context: EventContext) {
+async function updateAllConsumptions(
+	context: EventContext,
+) {
   // Retrieve consumptions snapshot
   const consumptionsSnapshot = await firestore
     .collection(FirebaseConstants.collections.users.name)
@@ -206,12 +233,15 @@ async function updateAllConsumptions(context: EventContext) {
   // Update all consumption documents
   await Promise.allSettled(
     consumptionsSnapshot.docs.map((consumptionDocument) =>
-      updateConsumption(consumptionDocument.data() as Consumption, {
+			updateConsumption(
+				consumptionDocument.data() as Consumption,
+				{
         userId: context.userId,
         consumptionId: consumptionDocument.id,
         user: context.user,
-      })
-    )
+				},
+			),
+			),
   );
   // Write latest version to user after recalculating all consumptions
   await firestore
@@ -232,10 +262,13 @@ async function updateAllConsumptions(context: EventContext) {
  */
 async function updateConsumption(
   consumption: Consumption,
-  context: EventContext
+	context: EventContext,
 ): Promise<CalculateConsumptionEmissionsResult> {
   // Calculate consumption emission result
-  const consumptionEmissionsResult = await calculateConsumptionEmissions(consumption, context);
+	const consumptionEmissionsResult = await calculateConsumptionEmissions(
+		consumption,
+		context,
+	);
   // Update consumption and set calculated carbon emissions
   await firestore
     .collection(FirebaseConstants.collections.users.name)
@@ -286,11 +319,13 @@ interface CalculateConsumptionEmissionsContext extends EventContext {
  */
 async function calculateConsumptionEmissions(
   consumption: Consumption,
-  context: EventContext
+	context: EventContext,
 ): Promise<CalculateConsumptionEmissionsResult> {
   // Get date of consumption: startDate for periodic consumptions and dateOfTravel for transportation
   const consumptionDate: Timestamp | undefined =
-    consumption.electricity?.startDate ?? consumption.heating?.startDate ?? consumption.transportation?.dateOfTravel;
+		consumption.electricity?.startDate ??
+		consumption.heating?.startDate ??
+		consumption.transportation?.dateOfTravel;
   // Check if date of consumption is unavailable
   if (!consumptionDate) {
     // Throw an error
@@ -306,35 +341,57 @@ async function calculateConsumptionEmissions(
   let result: CalculateConsumptionEmissionsResult;
   // Switch on category
   switch (consumption.category) {
-    case "heating":
+		case "heating": {
       const heating = consumption.heating;
       if (!heating) {
-        throw new Error("Missing heating data for a consumption with category set to heating");
+				throw new Error(
+					"Missing heating data for a consumption with category set to heating",
+				);
       }
-      result = await calculateHeatingConsumptionEmissions(heating, calculationContext);
+			result = await calculateHeatingConsumptionEmissions(
+				heating,
+				calculationContext,
+			);
       break;
-    case "electricity":
+		}
+		case "electricity": {
       const electricity = consumption.electricity;
       if (!electricity) {
-        throw new Error("Missing electricity data for a consumption with category set to electricity");
+				throw new Error(
+					"Missing electricity data for a consumption with category set to electricity",
+				);
       }
-      result = await calculateElectricityConsumptionEmissions(electricity, calculationContext);
+			result = await calculateElectricityConsumptionEmissions(
+				electricity,
+				calculationContext,
+			);
       break;
-    case "transportation":
+		}
+		case "transportation": {
       const transportation = consumption.transportation;
       if (!transportation) {
-        throw new Error("Missing transportation data for a consumption with category set to transportation");
+				throw new Error(
+					"Missing transportation data for a consumption with category set to transportation",
+				);
       }
-      result = await calculateTransportationConsumptionEmissions(transportation, calculationContext);
+			result = await calculateTransportationConsumptionEmissions(
+				transportation,
+				calculationContext,
+			);
       break;
+		}
     default:
       throw new Error(`Unsupported category: ${consumption.category}`);
   }
-  if (isNaN(result.carbonEmission)) {
-    throw new Error("CalculateConsumptionEmissionsResult: carbonEmission is not a number");
+	if (Number.isNaN(result.carbonEmission)) {
+		throw new Error(
+			"CalculateConsumptionEmissionsResult: carbonEmission is not a number",
+		);
   }
-  if (isNaN(result.energyExpended)) {
-    throw new Error("CalculateConsumptionEmissionsResult: energyExpended is not a number");
+	if (Number.isNaN(result.energyExpended)) {
+		throw new Error(
+			"CalculateConsumptionEmissionsResult: energyExpended is not a number",
+		);
   }
   return result;
 }
@@ -346,45 +403,57 @@ async function calculateConsumptionEmissions(
  */
 async function calculateHeatingConsumptionEmissions(
   heating: ConsumptionHeating,
-  context: CalculateConsumptionEmissionsContext
+	context: CalculateConsumptionEmissionsContext,
 ): Promise<CalculateConsumptionEmissionsResult> {
-  const heatingFactors: CountryMetricHeatingEntry | undefined = await getCountryMetricValue(
+	const heatingFactors: CountryMetricHeatingEntry | undefined =
+		await getCountryMetricValue(
     context.consumptionDate,
     context.user.country,
     (metric) => {
       switch (heating.heatingFuel) {
         case "electric": {
           // If the user has selected "Electric Heating", the electricity values will be used.
-          return { carbon: metric.electricity.default, energy: 1, unit: "kWh" };
+						return {
+							carbon: metric.electricity.default,
+							energy: 1,
+							unit: "kWh",
+						};
         }
         case "district": {
           if (heating.districtHeatingSource === "electric") {
-            return { carbon: metric.electricity.default, energy: 1, unit: "kWh" };
-          } else if (
+							return {
+								carbon: metric.electricity.default,
+								energy: 1,
+								unit: "kWh",
+							};
+						}
+						if (
             heating.districtHeatingSource &&
             metric.heating &&
             heating.districtHeatingSource in metric.heating
           ) {
             return metric.heating[heating.districtHeatingSource];
-          } else {
-            return undefined;
           }
+						return undefined;
         }
         // If consumption has any other type of heating, simply look the Emission Factor up.
         default: {
           if (metric.heating && heating.heatingFuel in metric.heating) {
             return metric.heating[heating.heatingFuel];
-          } else {
-            return undefined;
-          }
         }
+						return undefined;
       }
     }
+			},
   );
   const householdSize = heating.householdSize ?? 1;
   return {
-    carbonEmission: (context.consumption.value / householdSize) * (heatingFactors.carbon ?? 0),
-    energyExpended: (context.consumption.value / householdSize) * (heatingFactors.energy ?? 0),
+		carbonEmission:
+			(context.consumption.value / householdSize) *
+			(heatingFactors.carbon ?? 0),
+		energyExpended:
+			(context.consumption.value / householdSize) *
+			(heatingFactors.energy ?? 0),
   };
 }
 
@@ -395,24 +464,27 @@ async function calculateHeatingConsumptionEmissions(
  */
 async function calculateElectricityConsumptionEmissions(
   electricity: ConsumptionElectricity,
-  context: CalculateConsumptionEmissionsContext
+	context: CalculateConsumptionEmissionsContext,
 ): Promise<CalculateConsumptionEmissionsResult> {
   const electricityEmissionFactor = await getCountryMetricValue(
     context.consumptionDate,
     context.user.country,
     (metric) => {
-      if (electricity.electricitySource && metric.electricity && electricity.electricitySource in metric.electricity) {
+			if (
+				electricity.electricitySource &&
+				metric.electricity &&
+				electricity.electricitySource in metric.electricity
+			) {
         return {
           specificFactor: metric.electricity[electricity.electricitySource],
           defaultFactor: metric.electricity.default,
         };
-      } else {
+			}
         return {
           specificFactor: metric.electricity.default,
           defaultFactor: metric.electricity.default,
         };
-      }
-    }
+		},
   );
   const householdSize = electricity.householdSize ?? 1;
 
@@ -421,23 +493,34 @@ async function calculateElectricityConsumptionEmissions(
     return {
       carbonEmission:
         (context.consumption.value / householdSize) *
-        (electricityEmissionFactor.defaultFactor - electricityEmissionFactor.specificFactor) *
+				(electricityEmissionFactor.defaultFactor -
+					electricityEmissionFactor.specificFactor) *
         -1,
       energyExpended: 0,
     };
   }
 
   // If the user has homePhotovoltaics, and exported energy, the electricity exported will be subtracted from the total electricity consumption.
-  if (electricity.electricitySource === "homePhotovoltaics" && context.consumption.electricity?.electricityExported) {
+	if (
+		electricity.electricitySource === "homePhotovoltaics" &&
+		context.consumption.electricity?.electricityExported
+	) {
     return {
       carbonEmission:
-        (context.consumption.value / householdSize) * electricityEmissionFactor.specificFactor -
-        (context.consumption.electricity.electricityExported / householdSize) * electricityEmissionFactor.defaultFactor,
-      energyExpended: (context.consumption.value - context.consumption.electricity.electricityExported) / householdSize,
+				(context.consumption.value / householdSize) *
+					electricityEmissionFactor.specificFactor -
+				(context.consumption.electricity.electricityExported / householdSize) *
+					electricityEmissionFactor.defaultFactor,
+			energyExpended:
+				(context.consumption.value -
+					context.consumption.electricity.electricityExported) /
+				householdSize,
     };
   }
   return {
-    carbonEmission: (context.consumption.value / householdSize) * electricityEmissionFactor.specificFactor,
+		carbonEmission:
+			(context.consumption.value / householdSize) *
+			electricityEmissionFactor.specificFactor,
     energyExpended: context.consumption.value / householdSize,
   };
 }
@@ -449,7 +532,7 @@ async function calculateElectricityConsumptionEmissions(
  */
 async function calculateTransportationConsumptionEmissions(
   transportation: ConsumptionTransportation,
-  context: CalculateConsumptionEmissionsContext
+	context: CalculateConsumptionEmissionsContext,
 ): Promise<CalculateConsumptionEmissionsResult> {
   const transportationEmissionsFactor = await getCountryMetricValue(
     context.consumptionDate,
@@ -457,16 +540,27 @@ async function calculateTransportationConsumptionEmissions(
     (metric) => {
       const transportationType = transportation.transportationType;
       const publicVehicleOccupancy = transportation.publicVehicleOccupancy;
-      if (publicVehicleOccupancy && transportationType && transportationType in metric.transportation) {
+			if (
+				publicVehicleOccupancy &&
+				transportationType &&
+				transportationType in metric.transportation
+			) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (metric.transportation as any)[transportationType][
           publicVehicleOccupancy
         ] as CountryMetricTransportationEntry;
-      } else {
+			}
         let privateVehicleOccupancy = transportation.privateVehicleOccupancy;
-        if (privateVehicleOccupancy && privateVehicleOccupancy > 0 && !transportation.fuelConsumption) {
+			if (
+				privateVehicleOccupancy &&
+				privateVehicleOccupancy > 0 &&
+				!transportation.fuelConsumption
+			) {
           // set privateVehicleOccupancy to 2 if motorcylce with occupancy over 2
-          if (["motorcycle", "electricMotorcycle"].includes(transportationType) && privateVehicleOccupancy > 2) {
+				if (
+					["motorcycle", "electricMotorcycle"].includes(transportationType) &&
+					privateVehicleOccupancy > 2
+				) {
             privateVehicleOccupancy = 2;
           }
           // set privateVehicleOccupancy to 5 if any other vehicle with occupancy over 5
@@ -478,7 +572,10 @@ async function calculateTransportationConsumptionEmissions(
           privateVehicleOccupancy = 1;
         }
 
-        if (transportationType in metric.transportation && transportation.fuelConsumption) {
+			if (
+				transportationType in metric.transportation &&
+				transportation.fuelConsumption
+			) {
           const fuelConsumption = transportation.fuelConsumption;
           const passengers = transportation.privateVehicleOccupancy ?? 1;
 
@@ -486,40 +583,51 @@ async function calculateTransportationConsumptionEmissions(
             case "electricBike":
             case "electricCar":
               return {
-                carbon: (metric.transportation.customFuel.electric * (fuelConsumption / 100)) / passengers,
+							carbon:
+								(metric.transportation.customFuel.electric *
+									(fuelConsumption / 100)) /
+								passengers,
                 energy: fuelConsumption / 100 / passengers,
               };
             case "hybridCar":
               return {
                 carbon:
-                  (metric.transportation.customFuel.electric * (fuelConsumption / 10) * 0.5 +
-                    metric.transportation.customFuel.regular * (fuelConsumption / 10) * 0.5) /
+								(metric.transportation.customFuel.electric *
+									(fuelConsumption / 10) *
+									0.5 +
+									metric.transportation.customFuel.regular *
+										(fuelConsumption / 10) *
+										0.5) /
                   passengers,
                 energy: fuelConsumption / 10 / passengers,
               };
             default:
               return {
-                carbon: (metric.transportation.customFuel.regular * (fuelConsumption / 10)) / passengers,
+							carbon:
+								(metric.transportation.customFuel.regular *
+									(fuelConsumption / 10)) /
+								passengers,
                 energy: fuelConsumption / 10 / passengers,
               };
           }
-        } else if (transportationType in metric.transportation) {
+			}
+			if (transportationType in metric.transportation) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return (metric.transportation as any)[transportationType][
             String(privateVehicleOccupancy)
           ] as CountryMetricTransportationEntry;
-        } else {
-          return undefined;
-        }
-      }
     }
+			return undefined;
+		},
   );
 
   // Transport Emission Factor is in kg CO2 or kWh per km,
   // so it is just multiplied with the value given in kilometer.
   return {
-    carbonEmission: context.consumption.value * transportationEmissionsFactor.carbon,
-    energyExpended: context.consumption.value * transportationEmissionsFactor.energy,
+		carbonEmission:
+			context.consumption.value * transportationEmissionsFactor.carbon,
+		energyExpended:
+			context.consumption.value * transportationEmissionsFactor.energy,
   };
 }
 
@@ -530,49 +638,53 @@ async function calculateTransportationConsumptionEmissions(
  * @param metric A function returning a metric value
  */
 async function getCountryMetricValue<Value>(
-  date: Timestamp,
-  countryId: string,
-  metric: (countryMetric: CountryMetric) => Value | undefined
+	date: Timestamp,
+	countryId: string,
+	metric: (countryMetric: CountryMetric) => Value | undefined,
 ): Promise<NonNullable<Value>> {
-  // Retrieve the latest country metric document
-  const countryMetricDocument = (
-    await firestore
-      .collection(FirebaseConstants.collections.countries.name)
-      .doc(countryId)
-      .collection(FirebaseConstants.collections.countries.metrics.name)
-      .where("validFrom", "<", date)
-      .orderBy("validFrom", "desc")
-      .limit(1)
-      .get()
-  ).docs.at(0);
-  // Check if document is unavailable
-  if (!countryMetricDocument || !countryMetricDocument.exists) {
-    // Throw an error
-    throw new Error(`Couldn't find a matching metric document for country: ${countryId}`);
-  }
-  // Retrieve country metric from document
-  const countryMetric = countryMetricDocument.data() as CountryMetric | undefined;
-  // Check if metric is unavailable
-  if (!countryMetric) {
-    // Throw an error
-    throw new Error(`CountryMetric is unavailable for document: ${countryMetricDocument.ref.path}`);
-  }
-  // Retrieve value from metric
-  const value = metric(countryMetric);
-  // Check if value is available
-  if (value || (typeof value === "number" && !isNaN(value))) {
-    // Value is available
-    return value;
-  } else {
-    // Check if the country identifier is equal to the metrics fallback country
-    if (countryId === metricsFallbackCountry) {
-      // Throw an error
-      throw new Error("Metric couldn't be determined");
-    } else {
-      // Otherwise re-invoke function with metrics fallback country
-      return await getCountryMetricValue(date, metricsFallbackCountry, metric);
-    }
-  }
+	// Retrieve the latest country metric document
+	const countryMetricDocument = (
+		await firestore
+			.collection(FirebaseConstants.collections.countries.name)
+			.doc(countryId)
+			.collection(FirebaseConstants.collections.countries.metrics.name)
+			.where("validFrom", "<", date)
+			.orderBy("validFrom", "desc")
+			.limit(1)
+			.get()
+	).docs.at(0);
+	// Check if document is unavailable
+	if (!countryMetricDocument || !countryMetricDocument.exists) {
+		// Throw an error
+		throw new Error(
+			`Couldn't find a matching metric document for country: ${countryId}`,
+		);
+	}
+	// Retrieve country metric from document
+	const countryMetric = countryMetricDocument.data() as
+		| CountryMetric
+		| undefined;
+	// Check if metric is unavailable
+	if (!countryMetric) {
+		// Throw an error
+		throw new Error(
+			`CountryMetric is unavailable for document: ${countryMetricDocument.ref.path}`,
+		);
+	}
+	// Retrieve value from metric
+	const value = metric(countryMetric);
+	// Check if value is available
+	if (value || (typeof value === "number" && !Number.isNaN(value))) {
+		// Value is available
+		return value;
+	}
+	// Check if the country identifier is equal to the metrics fallback country
+	if (countryId === metricsFallbackCountry) {
+		// Throw an error
+		throw new Error("Metric couldn't be determined");
+	}
+	// Otherwise re-invoke function with metrics fallback country
+	return await getCountryMetricValue(date, metricsFallbackCountry, metric);
 }
 
 /**
@@ -584,11 +696,14 @@ async function getCountryMetricValue<Value>(
 async function updateConsumptionSummary(
   context: EventContext,
   consumption?: Consumption,
-  isConsumptionDeleted = false
+	isConsumptionDeleted = false,
 ) {
   const countryLabels = (
     (
-      await firestore.collection(FirebaseConstants.collections.countries.name).doc(context.user.country).get()
+			await firestore
+				.collection(FirebaseConstants.collections.countries.name)
+				.doc(context.user.country)
+				.get()
     ).data() as Country | undefined
   )?.labels;
   if (!countryLabels) {
@@ -600,12 +715,15 @@ async function updateConsumptionSummary(
       await firestore
         .collection(FirebaseConstants.collections.users.name)
         .doc(context.userId)
-        .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
+				.collection(
+					FirebaseConstants.collections.users.consumptionSummaries.name,
+				)
         .get()
     ).docs.map((document) => document.data() as ConsumptionSummary);
   }
   if (
-    latestConsumptionSummaryVersion == context.user.consumptionSummaryMeta?.version &&
+		latestConsumptionSummaryVersion ===
+			context.user.consumptionSummaryMeta?.version &&
     consumptionSummaries.length > 0 &&
     consumption &&
     !isXDaysAgo(context.user.consumptionSummaryMeta?.lastRecalculation, 14)
@@ -614,17 +732,12 @@ async function updateConsumptionSummary(
       consumption as Consumption,
       countryLabels,
       consumptionSummaries,
-      isConsumptionDeleted
+			isConsumptionDeleted,
     );
   } else {
     consumptionSummaries = [];
     console.log(
-      "Consumption summary version mismatch or outdated. Version was: " +
-        context.user.consumptionSummaryMeta?.version +
-        " | Expected: " +
-        latestConsumptionSummaryVersion +
-        " Recalculating consumption summary for user: " +
-        context.userId
+			`Consumption summary version mismatch or outdated. Version was: ${context.user.consumptionSummaryMeta?.version} | Expected: ${latestConsumptionSummaryVersion} Recalculating consumption summary for user: ${context.userId}`,
     );
     const existingConsumptions = (
       await firestore
@@ -638,7 +751,7 @@ async function updateConsumptionSummary(
         consumptionSummaries = updateConsumptionSummaryEntries(
           existingConsumption,
           countryLabels,
-          consumptionSummaries
+					consumptionSummaries,
         );
       } catch (error) {
         console.log(error);
@@ -663,14 +776,18 @@ async function updateConsumptionSummary(
         firestore
           .collection(FirebaseConstants.collections.users.name)
           .doc(context.userId)
-          .collection(FirebaseConstants.collections.users.consumptionSummaries.name)
-          .doc(String(consumptionSummary.year))
-          .set(consumptionSummary)
+					.collection(
+						FirebaseConstants.collections.users.consumptionSummaries.name,
       )
+					.doc(String(consumptionSummary.year))
+					.set(consumptionSummary),
+			),
     );
   }
   // Delete all documents in consumption-summary collection not in the latest consumption summary (i.e. deleted or empty)
-  const validYears = consumptionSummaries.map((summary) => String(summary.year));
+	const validYears = consumptionSummaries.map((summary) =>
+		String(summary.year),
+	);
   const consumptionSummariesSnapshot = await firestore
     .collection(FirebaseConstants.collections.users.name)
     .doc(context.userId)
@@ -679,7 +796,7 @@ async function updateConsumptionSummary(
   await Promise.allSettled(
     consumptionSummariesSnapshot.docs
       .filter((document) => !validYears.includes(document.id))
-      .map((document) => document.ref.delete())
+			.map((document) => document.ref.delete()),
   );
 }
 
@@ -689,14 +806,14 @@ async function updateConsumptionSummary(
  * @param thresholdDays The threshold in days
  */
 function isXDaysAgo(date: Timestamp | undefined, thresholdDays: number): boolean {
-  if (date) {
-    const currentTime = new Date();
-    const dateToCheck = new Date(date.seconds * 1000);
+	if (date) {
+		const currentTime = new Date();
+		const dateToCheck = new Date(date.seconds * 1000);
     const diffDays = Math.abs(currentTime.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays > thresholdDays;
+		return diffDays > thresholdDays;
   } else {
     return true;
-  }
+	}
 }
 
 /**
@@ -710,16 +827,25 @@ function updateConsumptionSummaryEntries(
   consumption: Consumption,
   labelStructure: CountryLabelStructure,
   consumptionSummaries: ConsumptionSummary[],
-  isConsumptionDeleted = false
+	isConsumptionDeleted = false,
 ): ConsumptionSummary[] {
-  const categories: ConsumptionCategory[] = ["heating", "electricity", "transportation"];
+	const categories: ConsumptionCategory[] = [
+		"heating",
+		"electricity",
+		"transportation",
+	];
   // get carbonEmissionValue and energyExpendedValue from current consumption
   let carbonEmissionValue = consumption.carbonEmissions;
   let energyExpendedValue = consumption.energyExpended;
   // Only proceed if both values are not undefined
-  if (!((carbonEmissionValue || carbonEmissionValue === 0) && (energyExpendedValue || energyExpendedValue === 0))) {
+	if (
+		!(
+			(carbonEmissionValue || carbonEmissionValue === 0) &&
+			(energyExpendedValue || energyExpendedValue === 0)
+		)
+	) {
     throw new Error(
-      "Carbon Emission and/or Energy Expended do not exist on consumption:" + JSON.stringify(consumption)
+			`Carbon Emission and/or Energy Expended do not exist on consumption:${JSON.stringify(consumption)}`,
     );
   }
   // reverse values if this is a delete action
@@ -738,26 +864,32 @@ function updateConsumptionSummaryEntries(
     endDate = consumption.heating.endDate;
   } else if (consumption.transportation) {
     startDate = consumption.transportation.dateOfTravel;
-    endDate = consumption.transportation.dateOfTravelEnd ?? consumption.transportation.dateOfTravel;
+		endDate =
+			consumption.transportation.dateOfTravelEnd ??
+			consumption.transportation.dateOfTravel;
   } else {
-    throw new Error("Consumption type cannot unknown for consumption:" + JSON.stringify(consumption));
+		throw new Error(
+			`Consumption type cannot unknown for consumption:${JSON.stringify(consumption)}`,
+		);
   }
-  const monthlyEnergyExpendedDistribution = calculateMonthlyConsumptionDistribution(
+	const monthlyEnergyExpendedDistribution =
+		calculateMonthlyConsumptionDistribution(
     startDate,
     endDate,
-    energyExpendedValue
+			energyExpendedValue,
   );
-  const monthlyCarbonEmissionDistribution = calculateMonthlyConsumptionDistribution(
+	const monthlyCarbonEmissionDistribution =
+		calculateMonthlyConsumptionDistribution(
     startDate,
     endDate,
-    carbonEmissionValue
+			carbonEmissionValue,
   );
-  if (!monthlyCarbonEmissionDistribution || !monthlyEnergyExpendedDistribution) {
+	if (
+		!monthlyCarbonEmissionDistribution ||
+		!monthlyEnergyExpendedDistribution
+	) {
     throw new Error(
-      "Monthly Distribution undefined. monthlyCarbonEmissionDistribution: " +
-        JSON.stringify(monthlyCarbonEmissionDistribution) +
-        " monthlyEnergyExpendedDistribution: " +
-        JSON.stringify(monthlyEnergyExpendedDistribution)
+			`Monthly Distribution undefined. monthlyCarbonEmissionDistribution: ${JSON.stringify(monthlyCarbonEmissionDistribution)} monthlyEnergyExpendedDistribution: ${JSON.stringify(monthlyEnergyExpendedDistribution)}`,
     );
   }
   // iterate over years in consumption and ensure a consumption summary exists.
@@ -768,18 +900,26 @@ function updateConsumptionSummaryEntries(
       consumptionSummaries = [newConsumptionSummary(year, categories)];
     }
     // create year if it does not exist
-    if (!consumptionSummaries.some((summary) => summary.year == year)) {
+		if (!consumptionSummaries.some((summary) => summary.year === year)) {
       consumptionSummaries.push(newConsumptionSummary(year, categories));
     }
-    const annualConsumption = ensure(consumptionSummaries.find((summary) => summary.year === year));
+		const annualConsumption = ensure(
+			consumptionSummaries.find((summary) => summary.year === year),
+		);
     let thisCarbonEmissionAnnualTotal = 0;
     let thisEnergyExpendedAnnualTotal = 0;
     annualConsumption.version = latestConsumptionSummaryVersion;
     annualConsumption.dateLastUpdated = Timestamp.now();
-    for (const [key] of Object.entries(monthlyCarbonEmissionDistribution[year])) {
+		for (const [key] of Object.entries(
+			monthlyCarbonEmissionDistribution[year],
+		)) {
       const month = Number(key);
       // create month if it does not exist
-      if (!annualConsumption.months.some((annualConsumptionMonth) => annualConsumptionMonth.number === month)) {
+			if (
+				!annualConsumption.months.some(
+					(annualConsumptionMonth) => annualConsumptionMonth.number === month,
+				)
+			) {
         annualConsumption.months.push({
           number: month,
           carbonEmission: {
@@ -792,22 +932,27 @@ function updateConsumptionSummaryEntries(
         });
       }
       const monthlyConsumption = ensure(
-        annualConsumption.months.find((annualConsumptionMonth) => annualConsumptionMonth.number === month)
+				annualConsumption.months.find(
+					(annualConsumptionMonth) => annualConsumptionMonth.number === month,
+				),
       );
       // increase monthly consumption total
       monthlyConsumption.carbonEmission.total = normaliseNumbers(
-        monthlyConsumption.carbonEmission.total + monthlyCarbonEmissionDistribution[year][month],
-        "number"
+				monthlyConsumption.carbonEmission.total +
+					monthlyCarbonEmissionDistribution[year][month],
+				"number",
       );
       monthlyConsumption.energyExpended.total = normaliseNumbers(
-        monthlyConsumption.energyExpended.total + monthlyEnergyExpendedDistribution[year][month],
-        "number"
+				monthlyConsumption.energyExpended.total +
+					monthlyEnergyExpendedDistribution[year][month],
+				"number",
       );
       // loop over categories and update them accordingly. This is required for updating percentages in all categories
       for (const category of categories) {
         if (
           !monthlyConsumption.categories.some(
-            (monthlyConsumptionCategory) => monthlyConsumptionCategory.category == category
+						(monthlyConsumptionCategory) =>
+							monthlyConsumptionCategory.category === category,
           )
         ) {
           monthlyConsumption.categories.push({
@@ -824,42 +969,51 @@ function updateConsumptionSummaryEntries(
         }
         const monthlyCategoryConsumption = ensure(
           monthlyConsumption.categories.find(
-            (monthlyConsumptionCategory) => monthlyConsumptionCategory.category === category
-          )
+						(monthlyConsumptionCategory) =>
+							monthlyConsumptionCategory.category === category,
+					),
         );
         // only add consumption value if category matches
         if (category === consumption.category) {
           monthlyCategoryConsumption.carbonEmission.total = normaliseNumbers(
-            monthlyCategoryConsumption.carbonEmission.total + monthlyCarbonEmissionDistribution[year][month],
-            "number"
+						monthlyCategoryConsumption.carbonEmission.total +
+							monthlyCarbonEmissionDistribution[year][month],
+						"number",
           );
           monthlyCategoryConsumption.energyExpended.total = normaliseNumbers(
-            monthlyCategoryConsumption.energyExpended.total + monthlyEnergyExpendedDistribution[year][month],
-            "number"
+						monthlyCategoryConsumption.energyExpended.total +
+							monthlyEnergyExpendedDistribution[year][month],
+						"number",
           );
           // add consumption value to overall total
           annualConsumption.carbonEmission.total = normaliseNumbers(
-            annualConsumption.carbonEmission.total + monthlyCarbonEmissionDistribution[year][month],
-            "number"
+						annualConsumption.carbonEmission.total +
+							monthlyCarbonEmissionDistribution[year][month],
+						"number",
           );
-          thisCarbonEmissionAnnualTotal += monthlyCarbonEmissionDistribution[year][month];
+					thisCarbonEmissionAnnualTotal +=
+						monthlyCarbonEmissionDistribution[year][month];
           annualConsumption.energyExpended.total = normaliseNumbers(
-            annualConsumption.energyExpended.total + monthlyEnergyExpendedDistribution[year][month],
-            "number"
+						annualConsumption.energyExpended.total +
+							monthlyEnergyExpendedDistribution[year][month],
+						"number",
           );
-          thisEnergyExpendedAnnualTotal += monthlyEnergyExpendedDistribution[year][month];
+					thisEnergyExpendedAnnualTotal +=
+						monthlyEnergyExpendedDistribution[year][month];
         }
         // recalculate percentages or set to zero if totals are zero (result is NaN)
         monthlyCategoryConsumption.carbonEmission.percentage =
           normaliseNumbers(
-            monthlyCategoryConsumption.carbonEmission.total / monthlyConsumption.carbonEmission.total,
-            "percentage"
+						monthlyCategoryConsumption.carbonEmission.total /
+							monthlyConsumption.carbonEmission.total,
+						"percentage",
           ) || 0;
 
         monthlyCategoryConsumption.energyExpended.percentage =
           normaliseNumbers(
-            monthlyCategoryConsumption.energyExpended.total / monthlyConsumption.energyExpended.total,
-            "percentage"
+						monthlyCategoryConsumption.energyExpended.total /
+							monthlyConsumption.energyExpended.total,
+						"percentage",
           ) || 0;
       }
     }
@@ -868,11 +1022,11 @@ function updateConsumptionSummaryEntries(
       if (categorySummary.category === consumption.category) {
         categorySummary.carbonEmission.total = normaliseNumbers(
           categorySummary.carbonEmission.total + thisCarbonEmissionAnnualTotal,
-          "number"
+					"number",
         );
         categorySummary.energyExpended.total = normaliseNumbers(
           categorySummary.energyExpended.total + thisEnergyExpendedAnnualTotal,
-          "number"
+					"number",
         );
         // create array with count of consumptions per day over a year
         categorySummary.consumptionDays = consumptionDaysArray(
@@ -880,22 +1034,31 @@ function updateConsumptionSummaryEntries(
           endDate,
           year,
           categorySummary.consumptionDays,
-          isConsumptionDeleted
+					isConsumptionDeleted,
         );
       }
       categorySummary.carbonEmission.percentage =
-        normaliseNumbers(categorySummary.carbonEmission.total / annualConsumption.carbonEmission.total, "percentage") ||
-        0;
+				normaliseNumbers(
+					categorySummary.carbonEmission.total /
+						annualConsumption.carbonEmission.total,
+					"percentage",
+				) || 0;
       categorySummary.energyExpended.percentage =
-        normaliseNumbers(categorySummary.energyExpended.total / annualConsumption.energyExpended.total, "percentage") ||
-        0;
+				normaliseNumbers(
+					categorySummary.energyExpended.total /
+						annualConsumption.energyExpended.total,
+					"percentage",
+				) || 0;
     }
   }
   calculateConsumptionLabel(labelStructure, consumptionSummaries);
   return consumptionSummaries;
 }
 
-function ensure<T>(argument: T | undefined | null, message = "This value was promised to be there."): T {
+function ensure<T>(
+	argument: T | undefined | null,
+	message = "This value was promised to be there.",
+): T {
   if (argument === undefined || argument === null) {
     throw new TypeError(message);
   }
@@ -908,28 +1071,32 @@ function normaliseNumbers(number: number, type: "percentage" | "number") {
     case "percentage": {
       if (number > 1) {
         return 1;
-      } else if (number < considerAsZero.upperLimit) {
+			}
+			if (number < considerAsZero.upperLimit) {
         return 0;
-      } else {
-        return number;
       }
+			return number;
     }
     case "number": {
-      if (number < considerAsZero.upperLimit && number > considerAsZero.lowerLimit) {
+			if (
+				number < considerAsZero.upperLimit &&
+				number > considerAsZero.lowerLimit
+			) {
         return 0;
-      } else {
-        return number;
       }
+			return number;
     }
   }
 }
 
 function calculateConsumptionLabel(
   labelStructure: CountryLabelStructure,
-  consumptionSummaryEntries?: ConsumptionSummary[]
+	consumptionSummaryEntries?: ConsumptionSummary[],
 ) {
   if (!consumptionSummaryEntries) {
-    throw new Error("consumptionSummaryEntries is undefined: " + JSON.stringify(consumptionSummaryEntries));
+		throw new Error(
+			`consumptionSummaryEntries is undefined: ${JSON.stringify(consumptionSummaryEntries)}`,
+		);
   }
   for (const consumptionSummaryEntry of consumptionSummaryEntries) {
     const overallCarbonEmissionLabels: CountryLabelValues[] = [];
@@ -937,20 +1104,21 @@ function calculateConsumptionLabel(
     for (const categorySummary of consumptionSummaryEntry.categories) {
       const carbonEmissionCategoryLabels: CountryLabelValues[] = JSON.parse(
         JSON.stringify(
-          labelStructure.carbonEmission[categorySummary.category as keyof typeof labelStructure.carbonEmission]
-        )
+					labelStructure.carbonEmission[
+						categorySummary.category as keyof typeof labelStructure.carbonEmission
+					],
+				),
       );
       const energyExpendedCategoryLabels: CountryLabelValues[] = JSON.parse(
         JSON.stringify(
-          labelStructure.energyExpended[categorySummary.category as keyof typeof labelStructure.energyExpended]
-        )
+					labelStructure.energyExpended[
+						categorySummary.category as keyof typeof labelStructure.energyExpended
+					],
+				),
       );
       if (!carbonEmissionCategoryLabels || !energyExpendedCategoryLabels) {
         throw new Error(
-          "Category Labels undefined. carbonEmissionCategoryLabels: " +
-            JSON.stringify(carbonEmissionCategoryLabels) +
-            " energyExpendedCategoryLabels: " +
-            JSON.stringify(energyExpendedCategoryLabels)
+					`Category Labels undefined. carbonEmissionCategoryLabels: ${JSON.stringify(carbonEmissionCategoryLabels)} energyExpendedCategoryLabels: ${JSON.stringify(energyExpendedCategoryLabels)}`,
         );
       }
       // get factor of consumptions entered based on number of days of data entry
@@ -960,14 +1128,16 @@ function calculateConsumptionLabel(
       }
       let consumptionLabelFactor: number;
       // Set consumptionLabelFactor to fraction of 1 for transportation, as it cannot be prorated across the year like the other categories, up to 5 entries.
-      if (categorySummary.category == "transportation") {
+			if (categorySummary.category === "transportation") {
         if (consumptionDaysCount <= 10) {
           consumptionLabelFactor = consumptionDaysCount / 10;
         } else {
           consumptionLabelFactor = 1;
         }
       } else {
-        consumptionLabelFactor = consumptionDaysCount / Object.keys(categorySummary.consumptionDays).length;
+				consumptionLabelFactor =
+					consumptionDaysCount /
+					Object.keys(categorySummary.consumptionDays).length;
       }
       if (!consumptionLabelFactor) {
         consumptionLabelFactor = 0;
@@ -984,9 +1154,13 @@ function calculateConsumptionLabel(
       let foundCarbonEmissionLabel = false;
       for (const carbonEmissionLabel of carbonEmissionCategoryLabels) {
         if (
-          ((carbonEmissionLabel.maximum > categorySummary.carbonEmission.total &&
-            carbonEmissionLabel.minimum <= categorySummary.carbonEmission.total) ||
-            (carbonEmissionLabel.minimum == 0 && categorySummary.carbonEmission.total < carbonEmissionLabel.minimum)) &&
+					((carbonEmissionLabel.maximum >
+						categorySummary.carbonEmission.total &&
+						carbonEmissionLabel.minimum <=
+							categorySummary.carbonEmission.total) ||
+						(carbonEmissionLabel.minimum === 0 &&
+							categorySummary.carbonEmission.total <
+								carbonEmissionLabel.minimum)) &&
           consumptionDaysCount > 0
         ) {
           categorySummary.carbonEmission.label = carbonEmissionLabel.label;
@@ -996,7 +1170,8 @@ function calculateConsumptionLabel(
         }
         // construct overall Carbon Emission label
         const i = overallCarbonEmissionLabels.findIndex(
-          (overallCarbonEmissionLabel) => overallCarbonEmissionLabel.label === carbonEmissionLabel.label
+					(overallCarbonEmissionLabel) =>
+						overallCarbonEmissionLabel.label === carbonEmissionLabel.label,
         );
         if (i > -1) {
           overallCarbonEmissionLabels[i].maximum += carbonEmissionLabel.maximum;
@@ -1019,7 +1194,8 @@ function calculateConsumptionLabel(
         }
         // construct overall Energy Expended label
         const i = overallEnergyExpendedLabels.findIndex(
-          (overallEnergyExpendedLabel) => overallEnergyExpendedLabel.label === energyExpendedLabel.label
+					(overallEnergyExpendedLabel) =>
+						overallEnergyExpendedLabel.label === energyExpendedLabel.label,
         );
         if (i > -1) {
           overallEnergyExpendedLabels[i].maximum += energyExpendedLabel.maximum;
@@ -1032,18 +1208,23 @@ function calculateConsumptionLabel(
     // find label for overall annual consumption
     if (
       consumptionSummaryEntry.categories.filter(
-        (consumptionSummaryEntryCategory) => consumptionSummaryEntryCategory.carbonEmission.label
+				(consumptionSummaryEntryCategory) =>
+					consumptionSummaryEntryCategory.carbonEmission.label,
       ).length > 0
     ) {
       for (const overallCarbonEmissionLabel of overallCarbonEmissionLabels) {
         if (
-          overallCarbonEmissionLabel.maximum > consumptionSummaryEntry.carbonEmission.total &&
-          overallCarbonEmissionLabel.minimum < consumptionSummaryEntry.carbonEmission.total
+					overallCarbonEmissionLabel.maximum >
+						consumptionSummaryEntry.carbonEmission.total &&
+					overallCarbonEmissionLabel.minimum <
+						consumptionSummaryEntry.carbonEmission.total
         ) {
-          consumptionSummaryEntry.carbonEmission.label = overallCarbonEmissionLabel.label;
+					consumptionSummaryEntry.carbonEmission.label =
+						overallCarbonEmissionLabel.label;
         } else if (
-          overallCarbonEmissionLabel.minimum == 0 &&
-          consumptionSummaryEntry.carbonEmission.total < overallCarbonEmissionLabel.minimum
+					overallCarbonEmissionLabel.minimum === 0 &&
+					consumptionSummaryEntry.carbonEmission.total <
+						overallCarbonEmissionLabel.minimum
         ) {
           consumptionSummaryEntry.carbonEmission.label = "A+";
         }
@@ -1053,15 +1234,19 @@ function calculateConsumptionLabel(
     }
     if (
       consumptionSummaryEntry.categories.filter(
-        (consumptionSummaryEntryCategory) => consumptionSummaryEntryCategory.energyExpended.label
+				(consumptionSummaryEntryCategory) =>
+					consumptionSummaryEntryCategory.energyExpended.label,
       ).length > 0
     ) {
       for (const overallEnergyExpendedLabel of overallEnergyExpendedLabels) {
         if (
-          overallEnergyExpendedLabel.maximum > consumptionSummaryEntry.energyExpended.total &&
-          overallEnergyExpendedLabel.minimum < consumptionSummaryEntry.energyExpended.total
+					overallEnergyExpendedLabel.maximum >
+						consumptionSummaryEntry.energyExpended.total &&
+					overallEnergyExpendedLabel.minimum <
+						consumptionSummaryEntry.energyExpended.total
         ) {
-          consumptionSummaryEntry.energyExpended.label = overallEnergyExpendedLabel.label;
+					consumptionSummaryEntry.energyExpended.label =
+						overallEnergyExpendedLabel.label;
         }
       }
     } else {
@@ -1074,7 +1259,7 @@ function calculateConsumptionLabel(
 function calculateMonthlyConsumptionDistribution(
   startDateTimestamp: Timestamp,
   endDateTimestamp: Timestamp,
-  consumptionValue: number
+	consumptionValue: number,
 ): { [year: number]: { [months: number]: number } } {
   const startDate = new Date(startDateTimestamp.seconds * 1000);
   const endDate = new Date(endDateTimestamp.seconds * 1000);
@@ -1094,8 +1279,10 @@ function calculateMonthlyConsumptionDistribution(
     const minMonth = year === startYear ? startMonth : 0;
     for (let month = minMonth; month <= maxMonth; month++) {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const monthStart = year === startYear && month === startMonth ? startDay : 1;
-      const monthEnd = year === endYear && month === endMonth ? endDay : daysInMonth;
+			const monthStart =
+				year === startYear && month === startMonth ? startDay : 1;
+			const monthEnd =
+				year === endYear && month === endMonth ? endDay : daysInMonth;
       const daysInTimeframe = monthEnd - monthStart + 1;
       monthlyConsumptionDistribution[year][month + 1] = daysInTimeframe;
       totalDays += daysInTimeframe;
@@ -1103,7 +1290,8 @@ function calculateMonthlyConsumptionDistribution(
   }
   for (const year1 of Object.entries(monthlyConsumptionDistribution)) {
     for (const month of Object.entries(year1[1])) {
-      monthlyConsumptionDistribution[Number(year1[0])][Number(month[0])] = (month[1] / totalDays) * consumptionValue;
+			monthlyConsumptionDistribution[Number(year1[0])][Number(month[0])] =
+				(month[1] / totalDays) * consumptionValue;
     }
   }
   return monthlyConsumptionDistribution;
@@ -1114,7 +1302,7 @@ function consumptionDaysArray(
   endDateTimestamp: Timestamp,
   forYear: number,
   arr?: { [day: number]: number },
-  isDelete = false
+	isDelete = false,
 ): { [day: number]: number } {
   let startDate = new Date(startDateTimestamp.seconds * 1000);
   let endDate = new Date(endDateTimestamp.seconds * 1000);
@@ -1128,15 +1316,19 @@ function consumptionDaysArray(
     arr = {};
   }
   for (let year = startYear; year <= endYear; year++) {
-    if (year != forYear) continue;
+		if (year !== forYear) continue;
     let yearStart = new Date(year, 0, 1, 1);
     yearStart = new Date(yearStart.setUTCHours(0, 0, 0, 0));
     let yearEnd = new Date(year + 1, 0, 1, 1);
     yearEnd = new Date(yearEnd.setUTCHours(0, 0, 0, 0));
-    const yearLength = Math.ceil((yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
+		const yearLength = Math.ceil(
+			(yearEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24),
+		);
     for (let j = 0; j < yearLength; j++) {
       if (!arr[j]) arr[j] = 0;
-      const currentDate = new Date(yearStart.getTime() + j * 24 * 60 * 60 * 1000);
+			const currentDate = new Date(
+				yearStart.getTime() + j * 24 * 60 * 60 * 1000,
+			);
       if (currentDate >= startDate && currentDate <= endDate) {
         arr[j] += countValue;
       } else {
@@ -1147,7 +1339,10 @@ function consumptionDaysArray(
   return arr;
 }
 
-function newConsumptionSummary(year: number, categories: string[]): ConsumptionSummary {
+function newConsumptionSummary(
+	year: number,
+	categories: string[],
+): ConsumptionSummary {
   const consumptionSummary: ConsumptionSummary = {
     year: year,
     version: latestConsumptionSummaryVersion,
