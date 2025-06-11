@@ -22,6 +22,8 @@ const recommenderApiBaseUrl = defineSecret("RECOMMENDER_API_BASE_URL");
 interface RecommenderApiResponse {
 	id: string;
 	type: string;
+	lan: string;
+	title: string;
 	message: string;
 	rationale: string;
 	user: string;
@@ -123,6 +125,8 @@ export const updateRecommendations = onCall(
 					.set({
 						id: entry.id,
 						type: entry.type,
+						lan: entry.lan,
+						title: entry.title,
 						createdAt: new Date(entry.creationTime),
 						updatedAt: Timestamp.now(),
 						notifyAt: new Date(entry.deliveredTime),
