@@ -1,6 +1,6 @@
 import axios, { type AxiosResponse } from "axios";
-import type { Consumption } from "../models/consumption/consumption";
-import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
+import type { Consumption } from "../../models/consumption/consumption";
+import { initializeAppIfNeeded } from "../../utils/initialize-app-if-needed";
 import { createRecommenderUserIfNeeded } from "./create-recommender-user-if-needed";
 
 // Initialize Firebase Admin SDK

@@ -20,8 +20,8 @@ import type {
 	CountryMetricTransportationEntry,
 } from "../models/country/metric/country-metric";
 import type { User } from "../models/user/user";
-import { createRecommenderConsumptions } from "../shared-functions/create-recommender-consumptions";
-import { deleteRecommenderConsumptions } from "../shared-functions/delete-recommender-consumptions";
+import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
+import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 

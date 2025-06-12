@@ -1,9 +1,9 @@
 import axios, { type AxiosResponse } from "axios";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Country } from "../models/country/country";
-import type { User } from "../models/user/user";
-import { FirebaseConstants } from "../utils/firebase-constants";
-import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
+import type { Country } from "../../models/country/country";
+import type { User } from "../../models/user/user";
+import { FirebaseConstants } from "../../utils/firebase-constants";
+import { initializeAppIfNeeded } from "../../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();

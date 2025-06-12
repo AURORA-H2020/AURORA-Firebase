@@ -3,11 +3,11 @@ import { Timestamp, getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import type { User } from "../models/user/user";
-import { createRecommenderUserIfNeeded } from "../shared-functions/create-recommender-user-if-needed";
+import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
+import { createRecommenderUserIfNeeded } from "../shared-functions/recommender/create-recommender-user-if-needed";
+import { runRecommenderEngine } from "../shared-functions/recommender/run-recommender-engine";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
-import { runRecommenderEngine } from "../shared-functions/run-recommender-engine";
-import { createRecommenderConsumptions } from "../shared-functions/create-recommender-consumptions";
 import type { Consumption } from "../models/consumption/consumption";
 
 // Initialize Firebase Admin SDK
