@@ -1,14 +1,14 @@
-import axios, { type AxiosResponse } from "axios";
-import { Timestamp, getFirestore } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import type { Consumption } from "../models/consumption/consumption";
 import type { User } from "../models/user/user";
 import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
 import { createRecommenderUserIfNeeded } from "../shared-functions/recommender/create-recommender-user-if-needed";
+import { getRecommendations } from "../shared-functions/recommender/get-recommendations";
 import { runRecommenderEngine } from "../shared-functions/recommender/run-recommender-engine";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
-import type { Consumption } from "../models/consumption/consumption";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -19,19 +19,6 @@ const firestore = getFirestore();
 // Get API token and URL from Secret Manager
 const recommenderApiToken = defineSecret("RECOMMENDER_API_TOKEN");
 const recommenderApiBaseUrl = defineSecret("RECOMMENDER_API_BASE_URL");
-
-interface RecommenderApiResponse {
-	id: string;
-	type: string;
-	lan: string;
-	title: string;
-	message: string;
-	rationale: string;
-	user: string;
-	priority: number;
-	creationTime: number;
-	deliveredTime: number;
-}
 
 /**
  * [updateRecommendations]
@@ -107,46 +94,20 @@ export const updateRecommendations = onCall(
 			};
 		}
 
-		const apiUrl = `${recommenderApiBaseUrl.value()}/api/user/${auth.uid}/recs`;
+		const getRecsRes = await getRecommendations({
+			userId: userDoc.id,
+			filters: { after: 0 },
+			secrets: {
+				recommenderApiToken: recommenderApiToken.value(),
+				recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
+			},
+		});
 
-		try {
-			const response = (await axios({
-				method: "get",
-				url: apiUrl,
-				headers: {
-					Authorization: `Bearer ${recommenderApiToken.value()}`,
-				},
-			})) as AxiosResponse<RecommenderApiResponse[] | undefined>;
-
-			if (!response.data) {
-				return {
-					success: false,
-					error:
-						"Error fetching recommendations from the API or no recommendations found.",
-				};
-			}
-
-			response.data.map((entry) => {
-				userDoc.ref
-					.collection(FirebaseConstants.collections.users.recommendations.name)
-					.doc(entry.id)
-					.set({
-						id: entry.id,
-						type: entry.type,
-						lan: entry.lan,
-						title: entry.title,
-						createdAt: new Date(entry.creationTime),
-						updatedAt: Timestamp.now(),
-						notifyAt: new Date(entry.deliveredTime),
-						message: entry.message,
-						rationale: entry.rationale,
-						priority: entry.priority,
-						isRead: false,
-					});
-			});
-		} catch (error) {
-			console.error("Error fetching recommendations:", error);
-			return { success: false, error };
+		if (!getRecsRes.success) {
+			return {
+				success: false,
+				error: getRecsRes.error,
+			};
 		}
 
 		return { success: true };
