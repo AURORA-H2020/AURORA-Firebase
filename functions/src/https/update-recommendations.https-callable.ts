@@ -96,7 +96,7 @@ export const updateRecommendations = onCall(
 
 		const getRecsRes = await getRecommendations({
 			userId: userDoc.id,
-			filters: { after: 0 },
+			filters: { after: new Date(0) },
 			secrets: {
 				recommenderApiToken: recommenderApiToken.value(),
 				recommenderApiBaseUrl: recommenderApiBaseUrl.value(),

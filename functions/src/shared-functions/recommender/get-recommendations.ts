@@ -29,11 +29,13 @@ export const getRecommendations = async ({
 }: {
 	userId: string;
 	filters: {
-		after: number;
+		after: Date;
 	};
 	secrets: { recommenderApiToken: string; recommenderApiBaseUrl: string };
 }) => {
-	const apiUrl = `${secrets.recommenderApiBaseUrl}/api/user/${userId}/recs?after=${filters.after}`;
+	const timeAfterSeconds = Math.floor(filters.after.getTime() / 1000);
+
+	const apiUrl = `${secrets.recommenderApiBaseUrl}/api/user/${userId}/recs?after=${timeAfterSeconds}`;
 
 	try {
 		const response = (await axios({
@@ -63,9 +65,9 @@ export const getRecommendations = async ({
 					type: entry.type,
 					lan: entry.lan,
 					title: entry.title,
-					createdAt: new Date(entry.creationTime),
+					createdAt: new Date(entry.creationTime * 1000),
 					updatedAt: Timestamp.now(),
-					notifyAt: new Date(entry.deliveredTime),
+					notifyAt: new Date(entry.deliveredTime * 1000),
 					message: entry.message,
 					rationale: entry.rationale,
 					priority: entry.priority,
