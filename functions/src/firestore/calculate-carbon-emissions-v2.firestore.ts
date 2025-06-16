@@ -20,8 +20,8 @@ import type {
 	CountryMetricTransportationEntry,
 } from "../models/country/metric/country-metric";
 import type { User } from "../models/user/user";
-import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
-import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
+// import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
+// import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
@@ -155,11 +155,12 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
 				);
 
 				// Delete consumption from recommender
-				await deleteRecommenderConsumptions({
+				// TODO: Re-enable this when recommender is ready
+				/* await deleteRecommenderConsumptions({
 					userId: context.userId,
 					consumptionIds: context.consumptionId,
 					secrets,
-				});
+				}); */
 			}
 		}
 	},
@@ -314,16 +315,16 @@ async function updateConsumption(
 		});
 
 	// Create a mock document snapshot for the consumption with updated data
-	const updatedConsumption: Consumption = {
+	/* const updatedConsumption: Consumption = {
 		...consumption,
 		carbonEmissions: consumptionEmissionsResult.carbonEmission,
 		energyExpended: consumptionEmissionsResult.energyExpended,
 		version: latestConsumptionVersion,
 		updatedAt: Timestamp.now(),
-	};
+	}; */
 
 	// Create a mock document snapshot with the updated consumption data
-	const mockConsumptionDoc = {
+	/* const mockConsumptionDoc = {
 		id: context.consumptionId,
 		data: () => updatedConsumption,
 		ref: firestore
@@ -331,14 +332,15 @@ async function updateConsumption(
 			.doc(context.userId)
 			.collection(FirebaseConstants.collections.users.consumptions.name)
 			.doc(context.consumptionId),
-	} as FirebaseFirestore.QueryDocumentSnapshot<Consumption>;
+	} as FirebaseFirestore.QueryDocumentSnapshot<Consumption>; */
 
 	// Sync consumption to recommender
-	await createRecommenderConsumptions({
+	// TODO: Re-enable this when recommender is ready
+	/* await createRecommenderConsumptions({
 		userId: context.userId,
 		consumptionDocs: mockConsumptionDoc,
 		secrets,
-	});
+	}); */
 
 	return consumptionEmissionsResult;
 }
