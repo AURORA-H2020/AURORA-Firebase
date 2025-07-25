@@ -31,5 +31,6 @@ export * from "./https/get-all-api-data.https-callable";
 export * from "./pub-sub/calculate-pv-investment-consumptions.pub-sub";
 export * from "./pub-sub/export-user-data.pub-sub";
 export * from "./pub-sub/get-daily-api-data.pub-sub";
-export * from "./pub-sub/get-latest-recommendations.pub-sub";
+// Disabled until performance issues with recommender API are resolved
+// export * from "./pub-sub/get-latest-recommendations.pub-sub";
 export * from "./pub-sub/process-recurring-consumptions.pub-sub";
