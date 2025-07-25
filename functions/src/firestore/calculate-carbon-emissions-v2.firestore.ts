@@ -1,16 +1,16 @@
 import {
 	type DocumentSnapshot,
-	Timestamp,
 	getFirestore,
+	Timestamp,
 } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import type { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import type { Consumption } from "../models/consumption/consumption";
 import type { ConsumptionCategory } from "../models/consumption/consumption-category";
 import type { ConsumptionElectricity } from "../models/consumption/electricity/consumption-electricity";
 import type { ConsumptionHeating } from "../models/consumption/heating/consumption-heating";
 import type { ConsumptionTransportation } from "../models/consumption/transportation/consumption-transportation";
+import type { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import type { Country } from "../models/country/country";
 import type { CountryLabelStructure } from "../models/country/labels/country-label-structure";
 import type { CountryLabelValues } from "../models/country/labels/country-label-values";
@@ -20,6 +20,8 @@ import type {
 	CountryMetricTransportationEntry,
 } from "../models/country/metric/country-metric";
 import type { User } from "../models/user/user";
+import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
+import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
 // import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
 // import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
 import { FirebaseConstants } from "../utils/firebase-constants";
@@ -155,12 +157,11 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
 				);
 
 				// Delete consumption from recommender
-				// TODO: Re-enable this when recommender is ready
-				/* await deleteRecommenderConsumptions({
+				await deleteRecommenderConsumptions({
 					userId: context.userId,
 					consumptionIds: context.consumptionId,
 					secrets,
-				}); */
+				});
 			}
 		}
 	},
@@ -315,16 +316,16 @@ async function updateConsumption(
 		});
 
 	// Create a mock document snapshot for the consumption with updated data
-	/* const updatedConsumption: Consumption = {
+	const updatedConsumption: Consumption = {
 		...consumption,
 		carbonEmissions: consumptionEmissionsResult.carbonEmission,
 		energyExpended: consumptionEmissionsResult.energyExpended,
 		version: latestConsumptionVersion,
 		updatedAt: Timestamp.now(),
-	}; */
+	};
 
 	// Create a mock document snapshot with the updated consumption data
-	/* const mockConsumptionDoc = {
+	const mockConsumptionDoc = {
 		id: context.consumptionId,
 		data: () => updatedConsumption,
 		ref: firestore
@@ -332,15 +333,14 @@ async function updateConsumption(
 			.doc(context.userId)
 			.collection(FirebaseConstants.collections.users.consumptions.name)
 			.doc(context.consumptionId),
-	} as FirebaseFirestore.QueryDocumentSnapshot<Consumption>; */
+	} as FirebaseFirestore.QueryDocumentSnapshot<Consumption>;
 
 	// Sync consumption to recommender
-	// TODO: Re-enable this when recommender is ready
-	/* await createRecommenderConsumptions({
+	await createRecommenderConsumptions({
 		userId: context.userId,
 		consumptionDocs: mockConsumptionDoc,
 		secrets,
-	}); */
+	});
 
 	return consumptionEmissionsResult;
 }
