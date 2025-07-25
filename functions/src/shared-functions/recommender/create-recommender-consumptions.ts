@@ -54,10 +54,6 @@ export const createRecommenderConsumptions = async ({
 			};
 		}
 
-		console.log(
-			"createRecommenderConsumptions: User ready in recommender system",
-		);
-
 		const apiToken = secrets.recommenderApiToken;
 		const apiUrl = `${secrets.recommenderApiBaseUrl}/api/user/${userId}/auroraconsumptions`;
 
