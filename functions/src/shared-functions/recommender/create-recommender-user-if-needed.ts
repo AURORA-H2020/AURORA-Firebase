@@ -1,4 +1,4 @@
-import axios, { type AxiosResponse } from "axios";
+import { type AxiosResponse, default as axios } from "axios";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Country } from "../../models/country/country";
 import type { User } from "../../models/user/user";

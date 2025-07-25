@@ -2,9 +2,9 @@
 import { storage } from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import type { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import type { Consumption } from "../models/consumption/consumption";
 import type { ConsumptionCategory } from "../models/consumption/consumption-category";
+import type { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import type { GlobalSummaryCategorySource } from "../models/global-summary/city/category/category-source/global-summary-category-source";
 import type { GlobalSummaryCategory } from "../models/global-summary/city/category/global-summary-category";
 import type { GlobalSummaryCategoryTemporalMonth } from "../models/global-summary/city/category/temporal/global-sumaary-category-temporal-month";

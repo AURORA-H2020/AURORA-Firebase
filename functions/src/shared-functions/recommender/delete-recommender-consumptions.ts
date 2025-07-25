@@ -1,4 +1,4 @@
-import axios from "axios";
+import { default as axios } from "axios";
 import { initializeAppIfNeeded } from "../../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK

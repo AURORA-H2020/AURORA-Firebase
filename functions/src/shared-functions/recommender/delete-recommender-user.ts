@@ -1,4 +1,4 @@
-import axios, { type AxiosResponse } from "axios";
+import { type AxiosResponse, default as axios } from "axios";
 import { initializeAppIfNeeded } from "../../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK
