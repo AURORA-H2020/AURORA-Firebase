@@ -117,7 +117,7 @@ export const createRecommenderUserIfNeeded = async ({
 			yearOfBirth: userData.yearOfBirth || null,
 			householdProfile: userData.householdProfile || null,
 			gender: userData.gender || null,
-			creationTime: new Date().getTime(),
+			creationTime: Date.now(),
 		};
 
 		console.log("Creating recommender user: ", apiUserData);
