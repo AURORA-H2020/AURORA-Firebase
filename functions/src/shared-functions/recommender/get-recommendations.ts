@@ -1,5 +1,5 @@
 import axios, { type AxiosResponse } from "axios";
-import { Timestamp, getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { FirebaseConstants } from "../../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../../utils/initialize-app-if-needed";
 

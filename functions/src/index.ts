@@ -7,17 +7,20 @@ setGlobalOptions({ region: FirebaseConstants.preferredCloudFunctionRegion });
 /**
  * Auth Cloud Functions
  */
+
 export * from "./auth/delete-user-data.auth";
 
 /**
  * Firestore Cloud Functions
  */
+
 export * from "./firestore/calculate-carbon-emissions-v2.firestore";
 export * from "./firestore/calculate-investment.firestore";
 
 /**
  * HTTPS Cloud Functions
  */
+
 export * from "./https/download-user-data.https-callable";
 export * from "./https/get-all-api-data.https-callable";
 
