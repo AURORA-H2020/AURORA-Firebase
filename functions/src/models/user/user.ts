@@ -2,6 +2,7 @@ import type { UserConsumptionMetadata } from "./user-consumption-metadata";
 import type { UserGender } from "./user-gender";
 import type { UserHomeEnergyLabel } from "./user-homeEnergyLabel";
 import type { UserHouseholdProfile } from "./user-householdProfile";
+import type { UserRecommenderMetadata } from "./user-recommender-metadata";
 import type { UserSettings } from "./user-settings/user-settings";
 
 /**
@@ -40,6 +41,10 @@ export interface User {
 	 * The consumption summary metadata
 	 */
 	consumptionSummaryMeta?: UserConsumptionMetadata;
+	/**
+	 * The recommender system metadata
+	 */
+	recommenderMeta?: UserRecommenderMetadata;
 	/**
 	 * The country identifier
 	 */
