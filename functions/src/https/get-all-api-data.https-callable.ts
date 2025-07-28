@@ -5,6 +5,7 @@ import type { PvPlant } from "../models/pv-plants/pv-plant";
 import { isAdmin } from "../shared-functions/is-Admin";
 import { savePvApiData } from "../shared-functions/save-pv-api-data";
 import { FirebaseConstants } from "../utils/firebase-constants";
+import { getDaysAgo } from "../utils/helpers";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK
@@ -64,17 +65,12 @@ export const getAllApiData = onCall(
 		 * Use yesterday's date for the API call.
 		 * This is because the data for the current day may not be available yet.
 		 */
-		const getYesterday = () => {
-			const today = new Date();
-			const yesterday = new Date();
-			yesterday.setDate(today.getDate() - 1);
-			return yesterday;
-		};
+		const yesterday = getDaysAgo(1);
 
 		const result = await savePvApiData({
 			plantDoc: plantDoc,
-			startDate: plantDoc.data().installationDate?.toDate() ?? getYesterday(), // Making typescript happy..
-			endDate: getYesterday(),
+			startDate: plantDoc.data().installationDate?.toDate() ?? yesterday,
+			endDate: yesterday,
 			secrets: {
 				pvApiToken: pvApiToken.value(),
 				pvApiBaseUrl: pvApiBaseUrl.value(),
