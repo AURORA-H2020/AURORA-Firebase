@@ -20,8 +20,8 @@ import type {
 	CountryMetricTransportationEntry,
 } from "../models/country/metric/country-metric";
 import type { User } from "../models/user/user";
-// import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
-// import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
+import { createRecommenderConsumptions } from "../shared-functions/recommender/create-recommender-consumptions";
+import { deleteRecommenderConsumptions } from "../shared-functions/recommender/delete-recommender-consumptions";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
@@ -155,12 +155,11 @@ export const calculateCarbonEmissionsV2 = onDocumentWritten(
 				);
 
 				// Delete consumption from recommender
-				// TODO: Uncommented until recommender API performance issues are resolved
-				/* await deleteRecommenderConsumptions({
+				await deleteRecommenderConsumptions({
 					userId: context.userId,
 					consumptionIds: context.consumptionId,
 					secrets,
-				}); */
+				});
 			}
 		}
 	},
@@ -314,8 +313,7 @@ async function updateConsumption(
 			updatedAt: Timestamp.now(),
 		});
 
-	// TODO: Uncommented until recommender API performance issues are resolved
-	/* // Create a mock document snapshot for the consumption with updated data
+	// Create a mock document snapshot for the consumption with updated data
 	const updatedConsumption: Consumption = {
 		...consumption,
 		carbonEmissions: consumptionEmissionsResult.carbonEmission,
@@ -340,7 +338,7 @@ async function updateConsumption(
 		userId: context.userId,
 		consumptionDocs: mockConsumptionDoc,
 		secrets,
-	}); */
+	});
 
 	return consumptionEmissionsResult;
 }
