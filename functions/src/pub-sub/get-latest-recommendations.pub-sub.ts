@@ -2,7 +2,6 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import pMap from "p-map";
 import type { User } from "../models/user/user";
 import { getRecommendations } from "../shared-functions/recommender/get-recommendations";
 import { syncAllUserData } from "../shared-functions/recommender/sync-all-user-data";
@@ -33,73 +32,73 @@ export const getLatestRecommendations = onSchedule(
 		secrets: [recommenderApiToken, recommenderApiBaseUrl],
 	},
 	async () => {
-		async () => {
-			try {
-				const usersSnapshots = await firestore
-					.collection(FirebaseConstants.collections.users.name)
-					.get();
+		try {
+			const { default: pMap } = await import("p-map");
 
-				const data = usersSnapshots.docs.map((doc) => ({
-					userId: doc.id,
-					userData: doc.data() as User,
-				}));
+			const usersSnapshots = await firestore
+				.collection(FirebaseConstants.collections.users.name)
+				.get();
 
-				const updaterFn = async ({
-					userId,
-					userData,
-				}: {
-					userId: string;
-					userData: User;
-				}) => {
-					if (
-						!userData.recommenderMeta?.lastFullSync?.seconds ||
-						userData.recommenderMeta.lastFullSync.seconds <
-							new Date("2025-07-28").getTime() / 1000
-					) {
-						console.log("Full sync needed for user: ", userId);
+			const data = usersSnapshots.docs.map((doc) => ({
+				userId: doc.id,
+				userData: doc.data() as User,
+			}));
 
-						// wait for 500 ms to avoid rate limiting
-						await new Promise((resolve) => setTimeout(resolve, 500));
+			const updaterFn = async ({
+				userId,
+				userData,
+			}: {
+				userId: string;
+				userData: User;
+			}) => {
+				if (
+					!userData.recommenderMeta?.lastFullSync?.seconds ||
+					userData.recommenderMeta.lastFullSync.seconds <
+						new Date("2025-07-28").getTime() / 1000
+				) {
+					console.log("Full sync needed for user: ", userId);
 
-						console.log("Getting recommendations for user: ", userId);
+					// wait for 500 ms to avoid rate limiting
+					await new Promise((resolve) => setTimeout(resolve, 500));
 
-						// We are intentionally skipping the getRecommendations call here as there won't be any recommendations available yet.
-						return await syncAllUserData({
-							userId,
-							secrets: {
-								recommenderApiToken: recommenderApiToken.value(),
-								recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
-							},
-						});
-					}
+					console.log("Getting recommendations for user: ", userId);
 
-					const getRecommendationsResult = await getRecommendations({
+					// We are intentionally skipping the getRecommendations call here as there won't be any recommendations available yet.
+					return await syncAllUserData({
 						userId,
-						// This needs to match the execution interval of the pub/sub function
-						filters: { after: getDaysAgo(1) },
 						secrets: {
 							recommenderApiToken: recommenderApiToken.value(),
 							recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
 						},
 					});
+				}
 
-					return {
-						...getRecommendationsResult,
-						user: userId,
-					};
-				};
-
-				const result = await pMap(data, updaterFn, {
-					concurrency: 20,
-					stopOnError: false,
+				const getRecommendationsResult = await getRecommendations({
+					userId,
+					// This needs to match the execution interval of the pub/sub function
+					filters: { after: getDaysAgo(1) },
+					secrets: {
+						recommenderApiToken: recommenderApiToken.value(),
+						recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
+					},
 				});
 
-				console.log("Update recommendations result:", result);
-				console.log("Successfull: ", result.filter((r) => r.success).length);
-				console.log("Failed: ", result.filter((r) => !r.success).length);
-			} catch (error) {
-				throw new Error(`Error getting recommendations: ${error}`);
-			}
-		};
+				return {
+					...getRecommendationsResult,
+					user: userId,
+				};
+			};
+
+			const result = await pMap(data, updaterFn, {
+				concurrency: 20,
+				stopOnError: false,
+			});
+
+			console.log("Update recommendations result:", result);
+			console.log("Successfull: ", result.filter((r) => r.success).length);
+			console.log("Failed: ", result.filter((r) => !r.success).length);
+		} catch (error) {
+			throw new Error(`Error getting recommendations: ${error}`);
+		}
 	},
 );
