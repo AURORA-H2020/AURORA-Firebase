@@ -35,6 +35,7 @@ export const syncAllUserData = async ({
 	if (!createConsumptionsRes.success) {
 		return {
 			success: false,
+			user: userId,
 			error: createConsumptionsRes.error,
 		};
 	}
@@ -51,5 +52,6 @@ export const syncAllUserData = async ({
 
 	return {
 		success: true,
+		user: userId,
 	};
 };
