@@ -2,10 +2,12 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import pMap from "p-map";
 import type { User } from "../models/user/user";
 import { getRecommendations } from "../shared-functions/recommender/get-recommendations";
 import { syncAllUserData } from "../shared-functions/recommender/sync-all-user-data";
 import { FirebaseConstants } from "../utils/firebase-constants";
+import { getDaysAgo } from "../utils/helpers";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK
@@ -31,44 +33,73 @@ export const getLatestRecommendations = onSchedule(
 		secrets: [recommenderApiToken, recommenderApiBaseUrl],
 	},
 	async () => {
-		try {
-			const usersSnapshots = await firestore
-				.collection(FirebaseConstants.collections.users.name)
-				.get();
+		async () => {
+			try {
+				const usersSnapshots = await firestore
+					.collection(FirebaseConstants.collections.users.name)
+					.get();
 
-			for (const doc of usersSnapshots.docs) {
-				// Check if property exists on user, if not full sync is needed.
-				const userData = doc.data() as User;
+				const data = usersSnapshots.docs.map((doc) => ({
+					userId: doc.id,
+					userData: doc.data() as User,
+				}));
 
-				if (!userData.recommenderMeta?.lastFullSync) {
-					console.log(
-						"Full sync needed for user: ",
-						doc.id,
-						" - lastFullSync not found",
-					);
+				const updaterFn = async ({
+					userId,
+					userData,
+				}: {
+					userId: string;
+					userData: User;
+				}) => {
+					if (
+						!userData.recommenderMeta?.lastFullSync?.seconds ||
+						userData.recommenderMeta.lastFullSync.seconds <
+							new Date("2025-07-28").getTime() / 1000
+					) {
+						console.log("Full sync needed for user: ", userId);
 
-					syncAllUserData({
-						userId: doc.id,
+						// wait for 500 ms to avoid rate limiting
+						await new Promise((resolve) => setTimeout(resolve, 500));
+
+						console.log("Getting recommendations for user: ", userId);
+
+						// We are intentionally skipping the getRecommendations call here as there won't be any recommendations available yet.
+						return await syncAllUserData({
+							userId,
+							secrets: {
+								recommenderApiToken: recommenderApiToken.value(),
+								recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
+							},
+						});
+					}
+
+					const getRecommendationsResult = await getRecommendations({
+						userId,
+						// This needs to match the execution interval of the pub/sub function
+						filters: { after: getDaysAgo(1) },
 						secrets: {
 							recommenderApiToken: recommenderApiToken.value(),
 							recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
 						},
 					});
-				}
 
-				console.log("Getting recommendations for user: ", doc.id);
+					return {
+						...getRecommendationsResult,
+						user: userId,
+					};
+				};
 
-				await getRecommendations({
-					userId: doc.id,
-					filters: { after: new Date() }, // TODO: Add filter for current date
-					secrets: {
-						recommenderApiToken: recommenderApiToken.value(),
-						recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
-					},
+				const result = await pMap(data, updaterFn, {
+					concurrency: 20,
+					stopOnError: false,
 				});
+
+				console.log("Update recommendations result:", result);
+				console.log("Successfull: ", result.filter((r) => r.success).length);
+				console.log("Failed: ", result.filter((r) => !r.success).length);
+			} catch (error) {
+				throw new Error(`Error getting recommendations: ${error}`);
 			}
-		} catch (error) {
-			throw new Error(`Error getting recommendations: ${error}`);
-		}
+		};
 	},
 );
