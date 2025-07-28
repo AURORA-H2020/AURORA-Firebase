@@ -84,10 +84,10 @@ export const createRecommenderConsumptions = async ({
 		});
 
 		if (validDocs.length === 0) {
-			console.warn(
-				"createRecommenderConsumptions: No valid documents to process",
-			);
-			return { success: false, error: "No valid documents to process" };
+			return {
+				success: true,
+				message: "Skipping - No consumptions to upload.",
+			};
 		}
 
 		// Safely extract data from documents
