@@ -1,9 +1,8 @@
-import * as functions from "firebase-functions";
-import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
-import { FirebaseConstants } from "../utils/firebase-constants";
 import { getFirestore } from "firebase-admin/firestore";
-import { deleteRecommenderUser } from "../shared-functions/recommender/delete-recommender-user";
+import * as functions from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
+import { FirebaseConstants } from "../utils/firebase-constants";
+import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
 
 // Initialize Firebase Admin SDK
 initializeAppIfNeeded();
@@ -47,13 +46,14 @@ export const deleteUserData = functions
 		);
 
 		// Delete user data from recommender system
-		await deleteRecommenderUser({
+		// TODO: Reenable this when recommender system is ready
+		/* await deleteRecommenderUser({
 			userId: user.uid,
 			secrets: {
 				recommenderApiToken: recommenderApiToken.value(),
 				recommenderApiBaseUrl: recommenderApiBaseUrl.value(),
 			},
-		});
+		}); */
 
 		console.log("Successfully deleted user data", user.uid);
 	});
