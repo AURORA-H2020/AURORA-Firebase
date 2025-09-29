@@ -55,7 +55,7 @@ export const getLatestRecommendations = onSchedule(
 				if (
 					!userData.recommenderMeta?.lastFullSync?.seconds ||
 					userData.recommenderMeta.lastFullSync.seconds <
-						new Date("2025-07-28").getTime() / 1000
+						new Date("2025-09-29").getTime() / 1000
 				) {
 					console.log("Full sync needed for user: ", userId);
 
