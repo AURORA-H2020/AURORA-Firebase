@@ -1,5 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
-import * as functions from "firebase-functions";
+import * as functions from "firebase-functions/v1";
 import { defineSecret } from "firebase-functions/params";
 import { deleteRecommenderUser } from "../shared-functions/recommender/delete-recommender-user";
 import { FirebaseConstants } from "../utils/firebase-constants";
