@@ -605,7 +605,6 @@ export const exportUserData = onSchedule(
 
 			for (const doc of usersSnapshot.docs) {
 				const userId = doc.id;
-				consolidatedUsers;
 				consolidatedUsers[userId] = doc.data() as UserWithSubCollections;
 
 				// Fetch specific sub-collections
