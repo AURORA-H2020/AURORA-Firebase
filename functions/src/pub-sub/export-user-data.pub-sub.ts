@@ -585,8 +585,8 @@ export const exportUserData = onSchedule(
 	{
 		schedule: "every day 00:30",
 		timeZone: "Europe/Berlin",
-		timeoutSeconds: 360,
-		memory: "512MiB",
+		timeoutSeconds: 500,
+		memory: "2GiB",
 	},
 	async () => {
 		try {
