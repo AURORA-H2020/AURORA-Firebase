@@ -17,6 +17,10 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: security-rules/tests/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
       - name: Cache Firebase Emulator Binaries
         uses: actions/cache@v6
         with:
