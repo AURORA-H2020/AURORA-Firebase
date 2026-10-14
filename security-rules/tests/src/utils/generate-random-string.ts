@@ -1,6 +1,7 @@
 /**
  * Generates a random string.
- * @param length The length of the string to be generated.
+ * @param {number} length The length of the string to be generated.
+ * @return {string} The generated string.
  */
 export function generateRandomString(length = 10): string {
   let result = "";
