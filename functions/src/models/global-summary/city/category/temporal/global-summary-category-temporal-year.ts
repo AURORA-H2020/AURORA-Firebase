@@ -1,5 +1,5 @@
 import type { CategoryLabel } from "../../../label/consumption-type-labels";
-import type { GlobalSummaryCategoryTemporalMonth } from "./global-sumaary-category-temporal-month";
+import type { GlobalSummaryCategoryTemporalMonth } from "./global-summary-category-temporal-month";
 
 export interface GlobalSummaryCategoryTemporalYear {
 	year: string;

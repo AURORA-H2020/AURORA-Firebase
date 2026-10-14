@@ -29,6 +29,6 @@ module.exports = {
     "valid-jsdoc": 0,
     "max-len": 0,
     "no-case-declarations": 0,
-    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true }],
   },
 };

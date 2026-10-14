@@ -38,7 +38,7 @@ The AURORA Backend is built on the **Firebase** platform, leveraging serverless 
     *   **Firestore**: NoSQL document database with robust security rules.
     *   **Authentication**: Secure user identity management.
     *   **Storage**: Blob storage for user content and assets.
-*   **Testing**: `firebase-functions-test`, `mocha` (implied)
+*   **Testing**: Firestore security rules are tested with `mocha` and `@firebase/rules-unit-testing` against the Firestore emulator. Cloud Functions have no automated tests; CI runs lint and build.
 
 ## Installation & Setup
 

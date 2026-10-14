@@ -7,7 +7,7 @@ import type { ConsumptionCategory } from "../models/consumption/consumption-cate
 import type { ConsumptionSummary } from "../models/consumption-summary/consumption-summary";
 import type { GlobalSummaryCategorySource } from "../models/global-summary/city/category/category-source/global-summary-category-source";
 import type { GlobalSummaryCategory } from "../models/global-summary/city/category/global-summary-category";
-import type { GlobalSummaryCategoryTemporalMonth } from "../models/global-summary/city/category/temporal/global-sumaary-category-temporal-month";
+import type { GlobalSummaryCategoryTemporalMonth } from "../models/global-summary/city/category/temporal/global-summary-category-temporal-month";
 import type { GlobalSummaryCategoryTemporalYear } from "../models/global-summary/city/category/temporal/global-summary-category-temporal-year";
 import type { GlobalSummaryDemographicCategory } from "../models/global-summary/city/demographic-category/global-summary-demographic-category";
 import type { GlobalSummaryCity } from "../models/global-summary/city/global-summary-city";
