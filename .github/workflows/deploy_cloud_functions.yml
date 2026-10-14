@@ -13,21 +13,14 @@ jobs:
     name: Deploy Cloud Functions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools@14.24.0
+        run: npm install -g firebase-tools@15.33.0
       - name: Install Cloud Functions Dependencies
         run: npm ci
         working-directory: functions
