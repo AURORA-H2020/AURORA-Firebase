@@ -120,7 +120,7 @@ export const createRecommenderUserIfNeeded = async ({
 			creationTime: Date.now(),
 		};
 
-		console.log("Creating recommender user: ", apiUserData);
+		console.log("Creating recommender user: ", userDoc.id);
 
 		// Create user in recommender system
 		const response = (await axios({

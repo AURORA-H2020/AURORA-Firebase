@@ -68,6 +68,7 @@ export const getDailyApiData = onSchedule(
 			resultStatus.push({ ...res, plantId: plantDoc.data().plantId });
 		});
 
-		Promise.all(promises).then(() => console.log(resultStatus));
+		await Promise.all(promises);
+		console.log(resultStatus);
 	},
 );

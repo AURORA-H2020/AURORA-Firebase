@@ -43,16 +43,18 @@ export const savePvApiData = async ({
 			},
 		})) as AxiosResponse<QpvApiResponse>;
 
-		response.data.data.map((entry) => {
-			plantDoc.ref
-				.collection(FirebaseConstants.collections.pvPlants.data.name)
-				.doc(entry.date)
-				.set({
-					...entry,
-					Ep: entry.Ep === null ? 0 : entry.Ep,
-					date: new Date(entry.date),
-				});
-		});
+		await Promise.all(
+			response.data.data.map((entry) =>
+				plantDoc.ref
+					.collection(FirebaseConstants.collections.pvPlants.data.name)
+					.doc(entry.date)
+					.set({
+						...entry,
+						Ep: entry.Ep === null ? 0 : entry.Ep,
+						date: new Date(entry.date),
+					}),
+			),
+		);
 	} catch (error) {
 		return { success: false, error };
 	}
