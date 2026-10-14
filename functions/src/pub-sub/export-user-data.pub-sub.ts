@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { storage } from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import type { Consumption } from "../models/consumption/consumption";
 import type { ConsumptionCategory } from "../models/consumption/consumption-category";
@@ -657,7 +657,7 @@ export const exportUserData = onSchedule(
 			const summaryFileName = `summarised-export-${currentUnixTime}.json`;
 			const summaryFilePath = `${summaryFolderName}/${summaryFileName}`;
 
-			const transformedUserDataFile = storage()
+			const transformedUserDataFile = getStorage()
 				.bucket(FirebaseConstants.buckets.auroraDashboard.name)
 				.file(summaryFilePath);
 
@@ -678,7 +678,7 @@ export const exportUserData = onSchedule(
 			const backupFileName = `users-backup-${currentUnixTime}.json`;
 			const backupFilePath = `${backupFolderName}/${backupFileName}`;
 
-			const fullUserDataFile = storage()
+			const fullUserDataFile = getStorage()
 				.bucket(FirebaseConstants.buckets.auroraDashboard.name)
 				.file(backupFilePath);
 			await fullUserDataFile
