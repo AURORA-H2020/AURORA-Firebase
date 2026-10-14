@@ -12,7 +12,7 @@
     "emulator:start": "firebase emulators:start --import ./backup --export-on-exit ./backup"
   },
   "engines": {
-    "node": "22"
+    "node": "24"
   },
   "main": "lib/index.js",
   "dependencies": {

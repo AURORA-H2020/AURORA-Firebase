@@ -32,7 +32,7 @@ The AURORA Backend is built on the **Firebase** platform, leveraging serverless 
 
 *   **Platform**: [Firebase](https://firebase.google.com/)
 *   **Language**: [TypeScript](https://www.typescriptlang.org/)
-*   **Runtime**: [Node.js 22](https://nodejs.org/)
+*   **Runtime**: [Node.js 24](https://nodejs.org/)
 *   **Core Services**:
     *   **Cloud Functions**: Serverless compute for event-driven triggers (Firestore, Auth, Pub/Sub) and HTTPS callables.
     *   **Firestore**: NoSQL document database with robust security rules.
@@ -43,7 +43,7 @@ The AURORA Backend is built on the **Firebase** platform, leveraging serverless 
 ## Installation & Setup
 
 ### Prerequisites
-*   [Node.js](https://nodejs.org/) (v22 recommended)
+*   [Node.js](https://nodejs.org/) (v24 recommended)
 *   [npm](https://www.npmjs.com/)
 *   [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`)
 
