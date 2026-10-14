@@ -1,6 +1,6 @@
 import { getFirestore } from "firebase-admin/firestore";
-import * as functions from "firebase-functions/v1";
 import { defineSecret } from "firebase-functions/params";
+import { onUserDeleted } from "firebase-functions/v2/identity";
 import { deleteRecommenderUser } from "../shared-functions/recommender/delete-recommender-user";
 import { FirebaseConstants } from "../utils/firebase-constants";
 import { initializeAppIfNeeded } from "../utils/initialize-app-if-needed";
@@ -16,18 +16,20 @@ const recommenderApiToken = defineSecret("RECOMMENDER_API_TOKEN");
 const recommenderApiBaseUrl = defineSecret("RECOMMENDER_API_BASE_URL");
 
 /**
- * [deleteUserData]
+ * [deleteUserDataV2]
  * A Cloud Function which gets triggered when a user has been deleted.
  * This function will clean up all Firestore documents and collection
  * associated with the deleted user.
+ * Event delivery is at-least-once, which is safe as deleting already deleted data is a no-op.
+ * Failed invocations are retried so that a transient error does not leave user data behind.
  */
-export const deleteUserData = functions
-	.region(FirebaseConstants.preferredCloudFunctionRegion)
-	.runWith({
+export const deleteUserDataV2 = onUserDeleted(
+	{
 		secrets: [recommenderApiToken, recommenderApiBaseUrl],
-	})
-	.auth.user()
-	.onDelete(async (user) => {
+		retry: true,
+	},
+	async (event) => {
+		const user = event.data;
 		console.log("Deleting user data", user.uid);
 		const bulkWriter = firestore.bulkWriter();
 		const maximumRetryAttempts = 3;
@@ -56,4 +58,5 @@ export const deleteUserData = functions
 		});
 
 		console.log("Successfully deleted user data", user.uid);
-	});
+	},
+);
